@@ -2595,7 +2595,7 @@ function tick() {
     viewmodel.update(dt, {
       speed,
       grounded: player.isGrounded,
-      sprinting,
+      sprinting: sprinting && !player.sliding,
       moving,
     });
     viewBob.update(dt, {
@@ -2605,7 +2605,7 @@ function tick() {
       moving,
     });
     if (weapon.reloading && !viewmodel.reloading) weapon.finishReload();
-    weapon.update(dt, { canFire: simulationActive && !sprinting && !playerHealth?.dead });
+    weapon.update(dt, { canFire: simulationActive && (!sprinting || player.sliding) && !playerHealth?.dead });
 
     if (playerHealth?.dead) {
       const sourcePosition = Number.isInteger(deathSource?.index) && !deathSource.dead
