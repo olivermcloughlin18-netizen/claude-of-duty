@@ -1,0 +1,415 @@
+{
+  "id": "kestrel",
+  "name": "Kestrel Heights",
+  "description": "Neon dusk rooftop compound: open deck lane, tiled plaza pavilion, covered server hall.",
+  "players": "6-8",
+  "spawns": [
+    {
+      "position": [
+        -1330,
+        0,
+        -200
+      ],
+      "yaw": -1.7201
+    },
+    {
+      "position": [
+        1330,
+        0,
+        -200
+      ],
+      "yaw": 1.7201
+    },
+    {
+      "position": [
+        -1330,
+        0,
+        200
+      ],
+      "yaw": -1.4215
+    },
+    {
+      "position": [
+        1330,
+        0,
+        200
+      ],
+      "yaw": 1.4215
+    },
+    {
+      "position": [
+        -1400,
+        0,
+        0
+      ],
+      "yaw": -1.5708
+    },
+    {
+      "position": [
+        1400,
+        0,
+        0
+      ],
+      "yaw": 1.5708
+    },
+    {
+      "position": [
+        -1250,
+        0,
+        -450
+      ],
+      "yaw": -1.9164
+    },
+    {
+      "position": [
+        1250,
+        0,
+        -450
+      ],
+      "yaw": 1.9164
+    },
+    {
+      "position": [
+        -1250,
+        0,
+        450
+      ],
+      "yaw": -1.2252
+    },
+    {
+      "position": [
+        1250,
+        0,
+        450
+      ],
+      "yaw": 1.2252
+    },
+    {
+      "position": [
+        -1340,
+        144,
+        -930
+      ],
+      "yaw": -2.1775
+    },
+    {
+      "position": [
+        1340,
+        144,
+        -930
+      ],
+      "yaw": 2.1775
+    },
+    {
+      "position": [
+        -760,
+        0,
+        -960
+      ],
+      "yaw": -2.472
+    },
+    {
+      "position": [
+        760,
+        0,
+        -960
+      ],
+      "yaw": 2.472
+    },
+    {
+      "position": [
+        -350,
+        0,
+        -985
+      ],
+      "yaw": -2.8002
+    },
+    {
+      "position": [
+        350,
+        0,
+        -985
+      ],
+      "yaw": 2.8002
+    },
+    {
+      "position": [
+        -880,
+        0,
+        -440
+      ],
+      "yaw": -2.0344
+    },
+    {
+      "position": [
+        880,
+        0,
+        -440
+      ],
+      "yaw": 2.0344
+    },
+    {
+      "position": [
+        -800,
+        0,
+        355
+      ],
+      "yaw": -1.1532
+    },
+    {
+      "position": [
+        800,
+        0,
+        355
+      ],
+      "yaw": 1.1532
+    },
+    {
+      "position": [
+        -690,
+        0,
+        470
+      ],
+      "yaw": -0.9728
+    },
+    {
+      "position": [
+        690,
+        0,
+        470
+      ],
+      "yaw": 0.9728
+    },
+    {
+      "position": [
+        -560,
+        0,
+        -150
+      ],
+      "yaw": -1.8325
+    },
+    {
+      "position": [
+        560,
+        0,
+        -150
+      ],
+      "yaw": 1.8325
+    },
+    {
+      "position": [
+        -600,
+        0,
+        200
+      ],
+      "yaw": -1.249
+    },
+    {
+      "position": [
+        600,
+        0,
+        200
+      ],
+      "yaw": 1.249
+    },
+    {
+      "position": [
+        -760,
+        0,
+        778
+      ],
+      "yaw": -0.7737
+    },
+    {
+      "position": [
+        760,
+        0,
+        778
+      ],
+      "yaw": 0.7737
+    },
+    {
+      "position": [
+        -520,
+        0,
+        880
+      ],
+      "yaw": -0.5337
+    },
+    {
+      "position": [
+        520,
+        0,
+        880
+      ],
+      "yaw": 0.5337
+    },
+    {
+      "position": [
+        -300,
+        0,
+        660
+      ],
+      "yaw": -0.4266
+    },
+    {
+      "position": [
+        300,
+        0,
+        660
+      ],
+      "yaw": 0.4266
+    },
+    {
+      "position": [
+        -1380,
+        96,
+        880
+      ],
+      "yaw": -1.0031
+    },
+    {
+      "position": [
+        1380,
+        96,
+        880
+      ],
+      "yaw": 1.0031
+    },
+    {
+      "position": [
+        -740,
+        0,
+        -690
+      ],
+      "yaw": -2.3212
+    },
+    {
+      "position": [
+        740,
+        0,
+        -690
+      ],
+      "yaw": 2.3212
+    },
+    {
+      "position": [
+        0,
+        0,
+        110
+      ],
+      "yaw": 0
+    },
+    {
+      "position": [
+        0,
+        132,
+        -110
+      ],
+      "yaw": 0
+    },
+    {
+      "position": [
+        0,
+        0,
+        560
+      ],
+      "yaw": 0
+    },
+    {
+      "position": [
+        0,
+        0,
+        -400
+      ],
+      "yaw": -3.1416
+    }
+  ],
+  "playerStart": {
+    "position": [
+      -1400,
+      0,
+      0
+    ],
+    "yaw": -1.4215
+  },
+  "bounds": {
+    "min": [
+      -5200,
+      -812,
+      -4600
+    ],
+    "max": [
+      5200,
+      996,
+      4600
+    ]
+  },
+  "playArea": {
+    "min": [
+      -1470,
+      -40,
+      -1020
+    ],
+    "max": [
+      1470,
+      340,
+      1020
+    ]
+  },
+  "minimap": {
+    "image": "minimap.png",
+    "centerX": 0,
+    "centerZ": 0,
+    "size": 3200,
+    "flipU": 1,
+    "flipV": -1,
+    "minimapSpan": 1250
+  },
+  "lighting": {
+    "sun": {
+      "color": "#ff9a6e",
+      "intensity": 1.3,
+      "position": [
+        -1061,
+        546,
+        909
+      ]
+    },
+    "hemi": {
+      "sky": "#7a5aa8",
+      "ground": "#2a2040",
+      "intensity": 0.35
+    },
+    "fog": {
+      "color": "#6a3a5e",
+      "near": 700,
+      "far": 4400
+    },
+    "probeIntensity": 0.9,
+    "environmentIntensity": 0.9,
+    "exposure": 1.6,
+    "saturation": 0.9,
+    "note": "Pass env/probe/vision/lut paths to applyEnvironmentLighting() and loadGradeLut(); apply sun/hemi/fog from these hints.",
+    "paths": {
+      "env": "textures/env/",
+      "probe": "textures/probe/",
+      "vision": "vision.json",
+      "lut": "textures/lut.png"
+    }
+  },
+  "format": "claude-of-duty-map-v1",
+  "files": {
+    "glb": "kestrel_optimized.glb",
+    "collisionBvh": "kestrel_collision_bvh.json",
+    "navmesh": "kestrel.navmesh.bin",
+    "navHints": "kestrel_nav_hints.json",
+    "ladders": "kestrel_ladders.json",
+    "probes": "kestrel_probes.json",
+    "vision": "vision.json",
+    "lut": "textures/lut.png",
+    "env": "textures/env/",
+    "probe": "textures/probe/",
+    "minimap": "minimap.png"
+  }
+}
