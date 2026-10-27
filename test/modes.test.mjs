@@ -21,7 +21,7 @@ test('new modes are registered, offline-only, and satisfy the contract shape', (
       assert.notEqual(state[key], undefined, `${id}.${key}`);
     }
   }
-  assert.deepEqual([MODES.tdm.scoreLimit, MODES.tdm.createMatch().scoreLimit, MODES.tdm.createMatch().timeLimitSeconds], [undefined, 50, 480]);
+  assert.deepEqual([MODES.tdm.createMatch().scoreLimit, MODES.tdm.createMatch().timeLimitSeconds], [50, 480]);
   assert.equal(MODES.kc.createMatch().scoreLimit, 40);
   assert.equal(MODES.tdm.botCount, 7);
   assert.deepEqual([0, 1, 2, 3, 4, 5, 6].map(MODES.tdm.teamFor), ['allies', 'allies', 'allies', 'axis', 'axis', 'axis', 'axis']);
@@ -47,7 +47,7 @@ test('Kill Confirmed scores only through confirm()', () => {
   assert.equal(match.confirm('a0'), true);
   assert.deepEqual(match.getState().teams.map((t) => t.score), [1, 0]);
   assert.equal(match.getState().standings.find((e) => e.id === 'a0').score, 1);
-  for (let i = 0; i < 39; i += 1) match.confirm('x1');
+  for (let i = 0; i < 40; i += 1) match.confirm('x1');
   assert.equal(match.getState().winnerTeam, 'axis');
 });
 

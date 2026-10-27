@@ -1046,6 +1046,7 @@ export class EnemyManager {
       taken.add(best);
       used.push(best.position);
       enemy.spawnAt(best);
+      enemy.spawnPoint = { ...best, position: best.position.clone(), authoredPosition: best.authoredPosition.clone() };
     }
   }
 

@@ -23,7 +23,7 @@ const CSS = `
   animation: mr-pop 1.5s cubic-bezier(.2, .9, .3, 1) forwards; }
 .mr-pop img { width: 34px; height: 34px; object-fit: contain; filter: drop-shadow(0 0 6px var(--c, #7fd0ff)); }
 .mr-pop small { font-size: 14px; color: var(--c, #7fd0ff); letter-spacing: .12em; }
-.mr-pop.tier { top: 24%; font-size: 24px; }
+.mr-pop.tier { top: 24%; font-size: 24px; animation-duration: 2.4s; }
 @keyframes mr-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(1.7); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   78% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -62%) scale(.96); } }
 `;
@@ -177,8 +177,8 @@ function dropTag(event) {
   const b = new THREE.Mesh(tagKit.plate, mats.plate);
   b.position.set(3, -2, 1.6);
   const sprite = new THREE.Sprite(mats.sprite);
-  sprite.scale.set(30, 30, 1);
-  sprite.position.y = 26;
+  sprite.scale.set(22, 22, 1);
+  sprite.position.y = 22;
   sprite.renderOrder = 40;
   mesh.add(a, b, sprite);
   mesh.position.set(feet.x, feet.y + 16, feet.z);
@@ -295,7 +295,8 @@ function onKill(event) {
 // ------------------------------------------------------------------ system
 export const system = {
   name: 'modeRules',
-  debug: {},
+  // Test control: fast-forward every tag's age so expiry needs no 30 s wait.
+  debug: { ageTags(seconds = 0) { for (const tag of tags) tag.age += Number(seconds) || 0; return tags.length; } },
   init(context) {
     ctx = context;
     kind = ctx.mode.id;
@@ -338,6 +339,9 @@ export const system = {
       })),
       confirms,
       denies,
+      detours: kind === 'kc'
+        ? ctx.combatants.all().filter((e) => e.actor?.detour).map((e) => ({ id: e.id, tagId: e.actor.detour.tagId }))
+        : [],
       ladderIndex,
       ladderWeapon: ladderIndex === null ? null : ladderWeapon(),
     };
