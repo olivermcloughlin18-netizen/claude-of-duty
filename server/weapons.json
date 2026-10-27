@@ -3,6 +3,10 @@
     "damage": 40,
     "rpm": 1172
   },
+  "fal_marksman": {
+    "damage": 80,
+    "rpm": 250
+  },
   "m27": {
     "damage": 33,
     "rpm": 938
@@ -19,13 +23,29 @@
     "damage": 40,
     "rpm": 782
   },
+  "scar_pump": {
+    "damage": 160,
+    "rpm": 88
+  },
   "sig556": {
     "damage": 40,
     "rpm": 1173
   },
+  "smr_bolt": {
+    "damage": 120,
+    "rpm": 60
+  },
+  "t25_smg": {
+    "damage": 22,
+    "rpm": 1250
+  },
   "tar21": {
     "damage": 40,
     "rpm": 938
+  },
+  "tar_smg": {
+    "damage": 26,
+    "rpm": 1125
   },
   "type95": {
     "damage": 33,
