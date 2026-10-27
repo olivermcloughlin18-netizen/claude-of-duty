@@ -1,0 +1,28 @@
+{
+  "id": "fixture",
+  "name": "Fixture Yard",
+  "format": "claude-of-duty-map-v1",
+  "spawns": [
+    { "position": [-1330, 0, -200], "yaw": -1.72 },
+    { "position": [1330, 0, -200], "yaw": 1.72 },
+    { "position": [-1330, 0, 200], "yaw": -1.42 },
+    { "position": [1330, 0, 200], "yaw": 1.42 },
+    { "position": [-1400, 0, 0], "yaw": -1.57 },
+    { "position": [1400, 0, 0], "yaw": 1.57 }
+  ],
+  "playerStart": { "position": [-1400, 0, 0], "yaw": -1.42 },
+  "bounds": { "min": [-5200, -812, -4600], "max": [5200, 996, 4600] },
+  "minimap": { "image": "minimap.png", "centerX": 0, "centerZ": 0, "size": 3200, "flipU": 1, "flipV": -1, "minimapSpan": 1250 },
+  "lighting": {
+    "fog": { "color": "#6a3a5e", "near": 700, "far": 4400 },
+    "paths": { "env": "textures/env/", "probe": "textures/probe/", "vision": "vision.json", "lut": "textures/lut.png" }
+  },
+  "files": {
+    "glb": "fixture_optimized.glb",
+    "collisionBvh": "fixture_collision_bvh.json",
+    "navmesh": "fixture.navmesh.bin",
+    "ladders": "fixture_ladders.json",
+    "probes": "fixture_probes.json",
+    "minimap": "minimap.png"
+  }
+}
