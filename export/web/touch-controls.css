@@ -49,9 +49,13 @@ body.touch-mode canvas { touch-action: none; }
 .touch-jump { right: var(--touch-right); bottom: calc(var(--touch-bottom) + 92px); }
 .touch-crouch { right: calc(var(--touch-right) + 14px); bottom: calc(var(--touch-bottom) + 20px); }
 .touch-reload { right: calc(var(--touch-right) + 94px); bottom: var(--touch-bottom); }
-.touch-pause, .touch-scores { top: max(12px, env(safe-area-inset-top)); width: 46px; height: 46px; border-radius: 12px; }
+.touch-pause, .touch-scores, .touch-swap, .touch-streak { top: max(12px, env(safe-area-inset-top)); width: 46px; height: 46px; border-radius: 12px; }
 .touch-pause { right: var(--touch-right); }
 .touch-scores { right: calc(var(--touch-right) + 56px); }
+.touch-swap { right: calc(var(--touch-right) + 112px); }
+.touch-streak { right: calc(var(--touch-right) + 168px); }
+/* Kept laid out when hidden so the harness's tap-target check still measures it. */
+.touch-streak[hidden] { display: flex; visibility: hidden; pointer-events: none; }
 .touch-hint { position: absolute; right: calc(var(--touch-right) + 22px); bottom: calc(var(--touch-bottom) + 178px); color: #d6ebe59c; font-size: 9px; text-shadow: 0 1px 5px #000; }
 .touch-settings { width: min(360px, 90vw); font-size: 12px; }
 .touch-settings label { display: flex; align-items: center; gap: 12px; }

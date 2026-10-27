@@ -816,6 +816,11 @@ export class EnemyManager {
     playerHealth,
     weaponEffects,
     hints,
+    isHostile,
+    applyDamage,
+    onShot,
+    extraThreats,
+    spawnClasses,
     onDeath = null,
     count = 6,
     enemyHealth = 100,
@@ -844,8 +849,13 @@ export class EnemyManager {
     if (!scene || !navigation?.crowd || !collisionWorld || !player) {
       throw new Error('EnemyManager requires scene, crowd navigation, collision, and player');
     }
+    for (const [name, fn] of Object.entries({ isHostile, applyDamage, onShot, extraThreats })) {
+      if (typeof fn !== 'function') throw new Error(`EnemyManager requires ${name}()`);
+    }
+    if (!Array.isArray(spawnClasses)) throw new Error('EnemyManager requires spawnClasses');
     Object.assign(this, {
       scene, navigation, collisionWorld, player, playerHealth, weaponEffects, hints, onDeath,
+      isHostile, applyDamage, onShot, extraThreats, spawnClasses,
       count, enemyHealth, moveSpeed, visionRange, attackRange, memoryTime,
       enemyDamage, enemyShotInterval, burstShotMin, burstShotMax,
       burstPauseMin, burstPauseMax, enemyMagazineSize, enemyReloadTime,
@@ -944,15 +954,9 @@ export class EnemyManager {
   prepareNavigationPoints() {
     const playerFeet = this.player.feetPosition;
     const authoredSpawns = this.hints?.spawns ?? [];
-    const spawnClassPriority = [
-      // Free-for-all markers cover the whole yacht and prevent the old
-      // six-versus-one opening cluster at the opposite end of the map.
-      'mp_dm_spawn',
-      'mp_tdm_spawn_team2_start',
-      'mp_tdm_spawn_allies_start',
-      'mp_tdm_spawn',
-      'mp_dm_spawn',
-    ];
+    // Priority order comes from the mode (FFA markers cover the whole yacht and
+    // prevent the old six-versus-one opening cluster at the far end).
+    const spawnClassPriority = this.spawnClasses;
     this.spawnCandidates = [];
     for (const classname of spawnClassPriority) {
       const projected = authoredSpawns
@@ -1061,7 +1065,7 @@ export class EnemyManager {
     let bestDistance = Infinity;
     const candidates = [this.player, ...this.enemies];
     for (const candidate of candidates) {
-      if (candidate === enemy || this.targetDead(candidate)) continue;
+      if (candidate === enemy || this.targetDead(candidate) || !this.isHostile(enemy, candidate)) continue;
       const distance = enemy.root.position.distanceTo(this.targetPosition(candidate, _target));
       if (distance > this.visionRange || distance >= bestDistance) continue;
       if (!this.canSeeTarget(enemy, candidate, minimumDot)) continue;
@@ -1135,8 +1139,8 @@ export class EnemyManager {
     this.weaponEffects?.addTracer(_origin.clone(), end);
     this.weaponEffects?.addMuzzleFlash(_origin, _direction);
     this.weaponEffects?.playEnemyShot(_origin, enemy.index);
-    if (hitPlayer) this.playerHealth?.takeDamage(this.enemyDamage, enemy);
-    else if (hitActor) hitActor.takeDamage(this.enemyDamage, null, enemy);
+    this.onShot({ shooter: enemy, origin: _origin.clone(), end, target: hitActor });
+    if (hitActor) this.applyDamage(hitActor, this.enemyDamage, enemy);
     return { hitPlayer, hitActor: this.targetId(hitActor), spread };
   }
 
@@ -1216,7 +1220,8 @@ export class EnemyManager {
 
   alert(origin, radius, lastSeen) {
     for (const enemy of this.enemies) {
-      if (enemy.dead || enemy.root.position.distanceToSquared(origin) > radius * radius) continue;
+      if (enemy.dead || enemy.root.position.distanceToSquared(origin) > radius * radius ||
+          !this.isHostile(enemy, this.player)) continue;
       enemy.lastSeen.copy(lastSeen);
       enemy.currentTarget = this.player;
       enemy.lastSeenTimer = Math.max(enemy.lastSeenTimer, 3.5);
@@ -1237,12 +1242,19 @@ export class EnemyManager {
   safeSpawnFor(actor = null) {
     let best = null;
     let bestScore = -Infinity;
+    // Hostile positions are gathered once: bots and the player this actor would
+    // fight, plus peers the host knows about (remote players).
+    const threats = [];
+    for (const other of [this.player, ...this.enemies]) {
+      if (other === actor || this.targetDead(other)) continue;
+      if (actor && !this.isHostile(actor, other)) continue;
+      threats.push(this.targetPosition(other, new THREE.Vector3()));
+    }
+    threats.push(...this.extraThreats());
     for (const candidate of this.spawnCandidates) {
       let nearest = Infinity;
       let visibleThreats = 0;
-      for (const other of [this.player, ...this.enemies]) {
-        if (other === actor || this.targetDead(other)) continue;
-        const otherPosition = this.targetPosition(other, _target);
+      for (const otherPosition of threats) {
         const distance = candidate.position.distanceTo(otherPosition);
         nearest = Math.min(nearest, distance);
         _origin.copy(candidate.position).addScaledVector(UP, 42);
@@ -1270,6 +1282,73 @@ export class EnemyManager {
       ...best,
       position: best.position.clone(),
       authoredPosition: best.authoredPosition.clone(),
+    };
+  }
+
+  /** Hide or show every bot body (the killcam replays recorded puppets instead). */
+  setVisible(visible) {
+    for (const enemy of this.enemies) enemy.root.visible = Boolean(visible);
+  }
+
+  /**
+   * A non-simulated body for a remote player or killcam ghost, built from the
+   * same baked pose frames the bots use. The caller moves `root`; hitboxes
+   * carry userData.combatantHit so Combatants.resolveHit can map them.
+   */
+  createPuppet(id) {
+    if (!this.poseTemplates) throw new Error('createPuppet needs load() to have finished');
+    const root = new THREE.Group();
+    root.name = `puppet_${id}`;
+    const modelRoot = new THREE.Group();
+    modelRoot.rotation.y = MODEL_FORWARD_OFFSET;
+    root.add(modelRoot);
+    const frames = Object.fromEntries(Object.entries(this.poseTemplates).map(([state, templates]) => [
+      state,
+      templates.map((template) => {
+        const body = template.clone(true);
+        const weapon = this.weaponTemplate.clone(true);
+        modelRoot.add(body);
+        attachWeapon(body, weapon, this.weaponMounts[state]);
+        modelRoot.remove(body);
+        return body;
+      }),
+    ]));
+    let shown = null;
+    const show = (state, index) => {
+      if (shown) modelRoot.remove(shown);
+      shown = frames[state][index];
+      modelRoot.add(shown);
+    };
+    show('idle', 0);
+
+    const hitboxes = [
+      makeHitbox(new THREE.BoxGeometry(18, 34, 15), new THREE.Vector3(0, 43, 0), null, 1, 'torso'),
+      makeHitbox(new THREE.SphereGeometry(7, 8, 6), new THREE.Vector3(0, 65, 0), null, 2, 'head'),
+      makeHitbox(new THREE.BoxGeometry(17, 29, 13), new THREE.Vector3(0, 16, 0), null, 0.75, 'legs'),
+    ];
+    for (const box of hitboxes) {
+      const { multiplier, region } = box.userData.enemyHit;
+      delete box.userData.enemyHit;
+      box.userData.combatantHit = { id, multiplier, region };
+    }
+    root.add(...hitboxes);
+    this.scene.add(root);
+
+    return {
+      root,
+      hitboxes,
+      /** state: 'idle'|'run'|'death'; seconds: time spent in that state. */
+      setPose: (state, seconds = 0) => {
+        const name = frames[state] ? state : 'idle';
+        const count = frames[name].length;
+        const raw = Math.floor(Math.max(0, seconds) * (this.poseFrameRates[name] ?? 1));
+        show(name, name === 'death' ? Math.min(count - 1, raw) : raw % count);
+      },
+      setVisible: (visible) => { root.visible = Boolean(visible); },
+      dispose: () => {
+        root.removeFromParent();
+        for (const box of hitboxes) { box.geometry.dispose(); box.material.dispose(); }
+      },
     };
   }
 
