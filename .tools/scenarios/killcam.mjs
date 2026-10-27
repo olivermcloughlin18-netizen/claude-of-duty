@@ -44,6 +44,10 @@ export async function run({ page, screenshot, artifactRoot, writeJson }) {
   const during = started.s;
   const camDistance = dist(during.systems.killcam.camera ?? [0, 0, 0], during.player.eye);
   await waitFor((s) => s.systems.killcam.seconds >= 0.4, 60000, 100);
+  const hudHidden = await page.evaluate(() => getComputedStyle(document.getElementById('crosshair')).visibility);
+  const bannerText = await page.evaluate(() => document.querySelector('.kc-label')?.textContent ?? null);
+  const botVisibility = await page.evaluate(() => globalThis.hijacked.enemies.enemies.map((e) => e.root.visible));
+  const botsHidden = botVisibility.every((v) => v === false);
   await page.waitForTimeout(700); // let the letterbox and banner transitions finish
   await screenshot('killcam-early');
   const earlySeconds = (await state()).systems.killcam.seconds;
@@ -59,10 +63,6 @@ export async function run({ page, screenshot, artifactRoot, writeJson }) {
     await screenshot(name);
     shots.push(name);
   }
-  const hudHidden = await page.evaluate(() => getComputedStyle(document.getElementById('crosshair')).visibility);
-  const bannerText = await page.evaluate(() => document.querySelector('.kc-label')?.textContent ?? null);
-  const botVisibility = await page.evaluate(() => globalThis.hijacked.enemies.enemies.map((e) => e.root.visible));
-  const botsHidden = botVisibility.every((v) => v === false);
   const skipShown = await page.evaluate(() => document.querySelector('.kc-skip')?.classList.contains('on'));
   await page.keyboard.press('Space');
   const skipped = await waitFor((s) => !s.systems.killcam.playing, 20000, 100);
