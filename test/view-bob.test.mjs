@@ -82,3 +82,16 @@ test('a brief loss of ground contact, as on a stair riser, does not stop the str
   settle(bob, { speed: 300, moving: true, grounded: false }, 1);
   assert.ok(bob.bobAmp < 0.01, 'a real jump still fades the stride');
 });
+
+test('slide dips the eye and kicks the FOV only for the draw', () => {
+  const bob = new ViewBob();
+  const camera = new THREE.PerspectiveCamera(75);
+  camera.position.set(0, 40, 0);
+  camera.userData.slideBlend = 1;
+  bob.apply(camera);
+  assert.ok(camera.position.y < 40 - 5);
+  assert.ok(camera.fov > 80);
+  bob.restore(camera);
+  assert.equal(camera.position.y, 40);
+  assert.equal(camera.fov, 75);
+});

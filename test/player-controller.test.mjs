@@ -192,3 +192,58 @@ test('without ladder volumes the prop is just a wall', () => {
   assert.equal(player.isOnLadder, false);
   assert.ok(Math.abs(player.feetPosition.y) < 1, `climbed without a volume: y=${player.feetPosition.y}`);
 });
+
+function slideWorld() {
+  const world = new THREE.Group();
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(6000, 1, 6000));
+  floor.position.y = -0.5;
+  world.add(floor);
+  world.updateWorldMatrix(true, true);
+  const camera = new THREE.PerspectiveCamera();
+  const player = new PlayerController(camera, world, {
+    spawn: new THREE.Vector3(0, 0.2, 0), moveSpeed: 300, sprintSpeed: 450, gravity: 980,
+  });
+  return { player, camera };
+}
+
+function drive(player, seconds, input) {
+  const speeds = [];
+  for (let i = 0; i < seconds * 120; i += 1) {
+    player.update(1 / 120, input);
+    speeds.push(Math.hypot(player.velocity.x, player.velocity.z));
+  }
+  return speeds;
+}
+
+test('crouch press while sprinting slides, then ends and cools down', () => {
+  const { player } = slideWorld();
+  const sprint = { forward: 1, sprint: true };
+  drive(player, 1, sprint);
+  assert.equal(player.sliding, false);
+  drive(player, 0.05, { ...sprint, crouch: true });
+  assert.equal(player.sliding, true);
+  assert.ok(player.crouched);
+  const speeds = drive(player, 0.2, { ...sprint, crouch: true });
+  assert.ok(Math.max(...speeds) > 450, `slide speed ${Math.max(...speeds)}`);
+  drive(player, 0.8, { ...sprint, crouch: false });
+  assert.equal(player.sliding, false);
+  assert.equal(player.crouched, false);
+  // Cooldown: an immediate second press does nothing.
+  drive(player, 0.3, { ...sprint, crouch: true });
+  assert.equal(player.sliding, false);
+  drive(player, 0.1, { ...sprint, crouch: false });
+  drive(player, 1, sprint);
+  drive(player, 0.05, { ...sprint, crouch: true });
+  assert.equal(player.sliding, true);
+});
+
+test('crouching while walking or standing does not slide', () => {
+  const { player } = slideWorld();
+  drive(player, 1, { forward: 1 });
+  drive(player, 0.1, { forward: 1, crouch: true });
+  assert.equal(player.sliding, false);
+  const other = slideWorld().player;
+  drive(other, 0.5, { sprint: true });
+  drive(other, 0.1, { sprint: true, crouch: true });
+  assert.equal(other.sliding, false);
+});

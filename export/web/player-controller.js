@@ -192,6 +192,14 @@ export class PlayerController {
       numberOr(options.maxCollisionStep, this.radius * 0.25),
     );
 
+    // Slide: a crouch press while sprinting on the ground. Speed starts at
+    // sprint x slideBoost and bleeds down to crouch speed over slideDuration.
+    this.slideBoost = Math.max(1, numberOr(options.slideBoost, 1.35));
+    this.slideDuration = Math.max(0.1, numberOr(options.slideDuration, 0.65));
+    this.slideCooldown = Math.max(0, numberOr(options.slideCooldown, 0.8));
+    this.slideBuffer = Math.max(0, numberOr(options.slideBuffer, 0.25));
+    this.slideMinSpeed = Math.max(0, numberOr(options.slideMinSpeed, this.sprintSpeed * 0.8));
+
     this.coyoteTime = Math.max(0, numberOr(options.coyoteTime, 0.1));
     this.jumpBufferTime = Math.max(0, numberOr(options.jumpBufferTime, 0.12));
     this.fallResetY = Number.isFinite(options.fallResetY) ? options.fallResetY : null;
@@ -227,6 +235,15 @@ export class PlayerController {
     this.crouched = false;
     this.onLadder = false;
     this.enabled = true;
+    this.sliding = false;
+    this.slideBlend = 0; // 0..1, smoothed; the renderer reads it for the camera dip / FOV kick
+    this._slideTime = 0;
+    this._slideCooldownTimer = 0;
+    this._slideSpeed = 0;
+    this._slideDir = new THREE.Vector3();
+    this._crouchPrev = false;
+    this._slideBuffer = 0;
+    this._slideAir = 0;
     this._accumulator = 0;
     this._jumpBufferTimer = 0;
     this._coyoteTimer = 0;
@@ -312,6 +329,8 @@ export class PlayerController {
     this.crouched = false;
     this.onFloor = false;
     this.grounded = false;
+    this._endSlide(0);
+    this.slideBlend = 0;
     this._lastCollision = null;
     this._releaseLadder();
     this._ladderExitTimer = 0;
@@ -366,6 +385,7 @@ export class PlayerController {
     if (!this.enabled) {
       this.velocity.set(0, 0, 0);
       this._accumulator = 0;
+      this._endSlide(0);
       this._releaseLadder();
     }
     return this;
@@ -395,6 +415,10 @@ export class PlayerController {
       steps += 1;
     }
 
+    this.slideBlend = THREE.MathUtils.damp(this.slideBlend, this.sliding ? 1 : 0, 14, dt);
+    if (this.slideBlend < 0.001) this.slideBlend = 0;
+    // The renderer (view-bob.js) reads this; the controller does not own the FOV.
+    this.camera.userData.slideBlend = this.slideBlend;
     this._syncCamera();
     return this.state;
   }
@@ -414,6 +438,7 @@ export class PlayerController {
       velocity: this.velocity,
       grounded: this.onFloor,
       crouched: this.crouched,
+      sliding: this.sliding,
       onLadder: this.onLadder,
       worldReady: this.worldReady,
     };
@@ -461,6 +486,7 @@ export class PlayerController {
     else this._coyoteTimer = Math.max(0, this._coyoteTimer - dt);
     this._jumpBufferTimer = Math.max(0, this._jumpBufferTimer - dt);
 
+    this._updateSlide(dt);
     this._updateCrouchState();
     this._updateLadderState(dt);
 
@@ -532,6 +558,14 @@ export class PlayerController {
   }
 
   _updateHorizontalVelocity(dt) {
+    if (this.sliding) {
+      // Speed bleeds off along the direction the slide began in.
+      const u = clamp(this._slideTime / this.slideDuration, 0, 1);
+      this._slideSpeed = this.crouchSpeed + (this.sprintSpeed * this.slideBoost - this.crouchSpeed) * (1 - u ** 1.5);
+      this.velocity.x = this._slideDir.x * this._slideSpeed;
+      this.velocity.z = this._slideDir.z * this._slideSpeed;
+      return;
+    }
     this._wishDirection(_wish);
 
     const speed = this.crouched
@@ -545,8 +579,49 @@ export class PlayerController {
     this.velocity.z += clamp(_wish.z - this.velocity.z, -maxChange, maxChange);
   }
 
+  /** Start, run and end the slide. Called before the crouch state each step. */
+  _updateSlide(dt) {
+    const pressed = this.input.crouch && !this._crouchPrev;
+    this._crouchPrev = this.input.crouch;
+    // A press just before touchdown still slides: stairs and lips drop ground
+    // contact for a few steps, so remember the press briefly.
+    this._slideBuffer = pressed ? this.slideBuffer : Math.max(0, this._slideBuffer - dt);
+    this._slideCooldownTimer = Math.max(0, this._slideCooldownTimer - dt);
+
+    if (this.sliding) {
+      this._slideTime += dt;
+      const horizontal = Math.hypot(this.velocity.x, this.velocity.z);
+      // Airborne, out of time, or stopped dead by geometry (the velocity left
+      // over from the last step is post-collision).
+      // Ground contact drops for a step or two on stairs and lips, so only a
+      // sustained airborne spell (a real jump or drop) ends it.
+      this._slideAir = this.onFloor ? 0 : this._slideAir + dt;
+      if (
+        this._slideTime >= this.slideDuration || this._slideAir > 0.18 || this.onLadder ||
+        (this._slideTime > 0.08 && horizontal < this._slideSpeed * 0.4)
+      ) this._endSlide(this.slideCooldown);
+      return;
+    }
+
+    if (this._slideBuffer <= 0 || !this.onFloor || this.onLadder) return;
+    if (this._slideCooldownTimer > 0 || !this.input.sprint || this.input.forward <= 0) return;
+    if (Math.hypot(this.velocity.x, this.velocity.z) < this.slideMinSpeed) return;
+    this._slideDir.set(this.velocity.x, 0, this.velocity.z).normalize();
+    this.sliding = true;
+    this._slideBuffer = 0;
+    this._slideAir = 0;
+    this._slideTime = 0;
+    this._slideSpeed = this.sprintSpeed * this.slideBoost;
+  }
+
+  _endSlide(cooldown) {
+    this.sliding = false;
+    this._slideTime = 0;
+    this._slideCooldownTimer = cooldown;
+  }
+
   _updateCrouchState() {
-    const wantCrouch = this.input.crouch;
+    const wantCrouch = this.input.crouch || this.sliding;
     if (wantCrouch && !this.crouched) {
       this._setCapsuleHeight(this.crouchHeight);
       this.crouched = true;
