@@ -28,10 +28,11 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # test/net-play.test.mjs boots server/server.js, which needs the server's ws
+        run: npm ci && npm ci --prefix server
 
       - name: Run focused unit tests
         run: npm run test:unit
 
       - name: Run server tests
-        run: npm ci --prefix server && npm test --prefix server
+        run: npm test --prefix server
