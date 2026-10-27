@@ -245,7 +245,7 @@ export class GunAudio {
     return panner;
   }
 
-  playLayer(name, gainValue, voiceLimit, { destination = null, lowpassHz = 0 } = {}) {
+  playLayer(name, gainValue, voiceLimit, { destination = null, lowpassHz = 0, rate = 1 } = {}) {
     const context = this.context;
     const buffer = this.buffers[name];
     if (!context || !buffer) return;
@@ -260,7 +260,7 @@ export class GunAudio {
     const gain = context.createGain();
     source.buffer = buffer;
     // The original alias varies each layer by up to 25 cents per shot.
-    source.playbackRate.value = 2 ** (((Math.random() * 50) - 25) / 1200);
+    source.playbackRate.value = rate * 2 ** (((Math.random() * 50) - 25) / 1200);
     gain.gain.value = gainValue;
 
     const chain = [source];
@@ -283,7 +283,10 @@ export class GunAudio {
     source.start();
   }
 
-  play({ indoors = false, weapon = null } = {}) {
+  // `audio` is a weapon definition's { rate, gain } plus `suppressed`: class
+  // voices reuse a base report pitched and scaled, and a suppressed gun is
+  // quieter and low-passed.
+  play({ indoors = false, weapon = null, audio = null } = {}) {
     const context = this.ensureContext();
     if (!context) return;
     if (context.state === 'suspended') void context.resume();
@@ -292,9 +295,12 @@ export class GunAudio {
       return;
     }
 
-    this.playLayer(this.shotLayer(weapon), 1, 3);
-    this.playLayer('lfe', 0.45, 8);
-    this.playLayer(indoors ? 'interiorDecay' : 'exteriorDecay', 0.32, 3);
+    const rate = audio?.rate ?? 1;
+    const gain = audio?.gain ?? 1;
+    const lowpassHz = audio?.suppressed ? 1400 : 0;
+    this.playLayer(this.shotLayer(weapon), gain, 3, { rate, lowpassHz });
+    this.playLayer('lfe', 0.45 * gain, 8, { rate, lowpassHz });
+    this.playLayer(indoors ? 'interiorDecay' : 'exteriorDecay', 0.32 * gain, 3, { rate, lowpassHz });
   }
 
   // The export ships only the player-perspective M27 alias, so the NPC report
@@ -419,11 +425,11 @@ export class WeaponEffects {
   // `spread` is a cone half-angle in radians applied to the aim ray (shotgun
   // pellets, hip fire). `silent` skips the report so a pellet volley sounds once.
   fire(camera, collisionRoot, muzzleCameraPosition = null, {
-    targets = [], weapon = null, spread = 0, silent = false,
+    targets = [], weapon = null, spread = 0, silent = false, audio = null,
   } = {}) {
     if (!silent) {
       this.lastIndoors = this.isIndoors(camera, collisionRoot);
-      this.audio.play({ indoors: this.lastIndoors, weapon });
+      this.audio.play({ indoors: this.lastIndoors, weapon, audio });
     }
     this.shotCount += 1;
     this.raycaster.setFromCamera(center, camera);

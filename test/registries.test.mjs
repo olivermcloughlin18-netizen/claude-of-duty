@@ -11,7 +11,7 @@ const WEAPON_FIELDS = ['id', 'name', 'class', 'magazineSize', 'reserveAmmo', 'ro
 const OLD_DAMAGE = { m27: 33, an94: 40, sa58: 55, saritch: 50, scar: 40, sig556: 40, tar21: 40, type95: 33, xm8: 35 };
 
 test('every weapon has every contract field and the nine rifles are intact', () => {
-  assert.deepEqual(Object.keys(WEAPONS).sort(), Object.keys(OLD_DAMAGE).sort());
+  for (const id of Object.keys(OLD_DAMAGE)) assert.ok(WEAPONS[id], id); // lane A adds more on top of the nine
   for (const def of Object.values(WEAPONS)) {
     for (const field of WEAPON_FIELDS) assert.notEqual(def[field], undefined, `${def.id}.${field}`);
     assert.ok(['ar', 'smg', 'sniper', 'shotgun'].includes(def.class));

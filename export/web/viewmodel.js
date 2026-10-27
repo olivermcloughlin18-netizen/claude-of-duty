@@ -198,6 +198,9 @@ export class Viewmodel {
     this.introFireAction = null;
     this.introAdsFireAction = null;
     this.reloading = false;
+    this.reloadSpeed = 1;
+    this.attachmentVisuals = { suppressor: false, scope: false };
+    this.attachmentMeshes = {};
     this.weaponRoot = null;
     this.magazineRoot = null;
     this.spareMagazine = null;
@@ -331,6 +334,7 @@ export class Viewmodel {
     this.computeAdsAlignment();
     this.tagFlash = findNode(weapon.scene, 'tag_flash');
     this.createMuzzleFlash();
+    this.syncAttachmentVisuals();
 
     this.root.traverse((object) => {
       object.frustumCulled = false;
@@ -369,6 +373,57 @@ export class Viewmodel {
     this.muzzleFlash.renderOrder = 100;
     this.muzzleLight = new THREE.PointLight(0xffa43b, 0, 25, 2);
     this.tagFlash.add(this.muzzleFlash, this.muzzleLight);
+  }
+
+  // Procedural attachments (no models ship for them): a suppressor can on the
+  // muzzle and a scope tube over the receiver, both parented to j_gun so they
+  // ride the gun's animation. j_gun axes: X down the barrel, Y left, Z up.
+  setAttachmentVisuals({ suppressor = false, scope = false } = {}) {
+    this.attachmentVisuals = { suppressor: Boolean(suppressor), scope: Boolean(scope) };
+    this.syncAttachmentVisuals();
+  }
+
+  syncAttachmentVisuals() {
+    const jGun = this.ready || this.tagFlash ? findNode(this.root, 'j_gun') : null;
+    if (!jGun || !this.tagFlash) return;
+    const want = this.attachmentVisuals;
+    if (want.suppressor && !this.attachmentMeshes.suppressor) {
+      this.root.updateMatrixWorld(true);
+      const muzzle = jGun.worldToLocal(this.tagFlash.getWorldPosition(new THREE.Vector3()));
+      const can = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.85, 0.85, 8, 20).rotateZ(Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x24272b, metalness: 0.35, roughness: 0.5 }),
+      );
+      can.position.set(muzzle.x + 2.2, muzzle.y, muzzle.z);
+      can.frustumCulled = false;
+      jGun.add(can);
+      this.attachmentMeshes.suppressor = can;
+    }
+    if (want.scope && !this.attachmentMeshes.scope) {
+      const anchors = this.adsSightAnchors;
+      const front = anchors?.front ?? [14, 0, 4.9];
+      const rear = anchors?.rear ?? [-2, 0, 4.9];
+      const metal = new THREE.MeshStandardMaterial({ color: 0x1b1d20, metalness: 0.35, roughness: 0.45 });
+      const scope = new THREE.Group();
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 8, 20).rotateZ(Math.PI / 2), metal);
+      const bell = (x, radius) => {
+        const part = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.78, 1.6, 20).rotateZ(Math.PI / 2), metal);
+        part.position.x = x;
+        return part;
+      };
+      const mount = (x) => {
+        const part = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 1.3), metal);
+        part.position.set(x, 0, -1.1);
+        return part;
+      };
+      scope.add(tube, bell(4.4, 1.15), bell(-4.4, 0.95), mount(-2.2), mount(2.2));
+      scope.position.set((front[0] + rear[0]) / 2, 0, Math.max(front[2], rear[2]) + 1.6);
+      scope.traverse((object) => { object.frustumCulled = false; });
+      jGun.add(scope);
+      this.attachmentMeshes.scope = scope;
+    }
+    if (this.attachmentMeshes.suppressor) this.attachmentMeshes.suppressor.visible = want.suppressor;
+    if (this.attachmentMeshes.scope) this.attachmentMeshes.scope.visible = want.scope;
   }
 
   // ADS: line the eye, the rear sight and the front post up on one axis. The
@@ -668,7 +723,7 @@ export class Viewmodel {
     this.adsFireAction?.stop();
     this.introFireAction?.stop();
     this.introAdsFireAction?.stop();
-    action.reset().fadeIn(0.12).play();
+    action.reset().fadeIn(0.12).setEffectiveTimeScale(this.reloadSpeed).play();
     this.idleAction.fadeOut(0.12);
     // The empty magazine still holds the well; the fresh one waits for mag_out.
     this.showSpareMagazine(false);
@@ -755,12 +810,13 @@ export class Viewmodel {
       action.reset().setEffectiveWeight(1).fadeIn(0.005).play();
     }
     this.flashTime = 0.045;
-    if (this.muzzleFlash) {
+    // A suppressed gun shows no muzzle flash.
+    if (this.muzzleFlash && !this.attachmentVisuals.suppressor) {
       this.muzzleFlash.material.rotation = Math.random() * Math.PI;
       this.muzzleFlash.material.opacity = 1;
       this.muzzleFlash.visible = true;
     }
-    if (this.muzzleLight) this.muzzleLight.intensity = 7;
+    if (this.muzzleLight && !this.attachmentVisuals.suppressor) this.muzzleLight.intensity = 7;
     return true;
   }
 

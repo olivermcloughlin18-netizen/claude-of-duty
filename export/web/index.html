@@ -213,7 +213,7 @@
   }
   .fe-class-grid {
     display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px; min-height: 0;
+    gap: 8px; min-height: 0; overflow-y: auto;
   }
   .fe-class-card {
     position: relative; min-width: 0; min-height: 116px; padding: 7px;
@@ -577,14 +577,15 @@
       <div class="fe-class-head">
         <div>
           <h2 class="fe-heading">Create a class</h2>
-          <p class="fe-class-sub">Choose your primary assault rifle</p>
+          <p class="fe-class-sub">Pick a class slot, a primary from the cards, a secondary and attachments</p>
         </div>
         <p class="fe-class-selection" id="fe-class-selection">Select a rifle</p>
       </div>
+      <div class="fe-class-editor" id="fe-class-editor"></div>
       <div class="fe-class-grid">
       </div>
       <div class="fe-class-actions">
-        <button type="button" class="fe-btn" data-action="class-confirm">Equip rifle</button>
+        <button type="button" class="fe-btn" data-action="class-confirm">Save &amp; equip</button>
         <button type="button" class="fe-btn" data-action="class-back">Back</button>
       </div>
     </section>
@@ -990,7 +991,7 @@ const menuButtons = [...blocker.querySelectorAll('.fe-btn')];
 // Class cards are generated from the weapon registry (same DOM classes as the
 // hand-written cards they replaced). Lane A owns this block.
 const CLASS_ROLES = Object.freeze({ ar: 'Assault rifle', smg: 'Submachine gun', sniper: 'Sniper rifle', shotgun: 'Shotgun' });
-const FIRE_ALT = Object.freeze({ auto: 'Automatic', semi: 'Semi-automatic', burst: 'Burst', bolt: 'Bolt action', pump: 'Pump action' });
+const FIRE_ALT = Object.freeze({ auto: 'Automatic', single: 'Semi-automatic', burst: 'Burst', bolt: 'Bolt action', pump: 'Pump action' });
 const classGrid = blocker.querySelector('.fe-class-grid');
 for (const definition of Object.values(WEAPONS)) {
   const card = document.createElement('button');
@@ -1058,11 +1059,12 @@ for (const card of classCards) {
     fireType.src = `ui/hud/${definition.fireTypeIcon}.png`;
     fireType.alt = FIRE_ALT[definition.fireTypeIcon.replace('hud_mp_firerate_', '')] ?? definition.fireTypeIcon;
   }
-  if (role) role.textContent = CLASS_ROLES[definition.class] ?? definition.class;
+  if (role) role.textContent = `${CLASS_ROLES[definition.class] ?? definition.class} · ${definition.fireMode}`;
   card.querySelector('[data-card-name]').textContent = definition.name;
   card.querySelector('[data-card-rpm]').textContent = definition.roundsPerMinute;
   card.querySelector('[data-card-mag]').textContent = definition.magazineSize;
-  card.querySelector('[data-card-damage]').textContent = definition.damage;
+  card.querySelector('[data-card-damage]').textContent = definition.pellets > 1
+    ? `${definition.pellets}×${definition.damage}` : definition.damage;
 }
 
 // Setup screen: map cards come from listMaps() once the game has booted, mode
@@ -1345,12 +1347,7 @@ for (const slot of weaponSlots.values()) {
   slotViewmodel.onNotetrack = (cue) => {
     if (cue.type === 'sound') weaponEffects.playFoley(cue.name);
   };
-  slot.controller = new WeaponController({
-    magazineSize: definition.magazineSize,
-    reserveAmmo: definition.reserveAmmo,
-    roundsPerMinute: definition.roundsPerMinute,
-    initialRoundsPerMinute: definition.initialRoundsPerMinute,
-    initialShotCount: definition.initialShotCount,
+  slot.controller = WeaponController.fromDefinition(definition, {
     onFire: (shot) => {
       if (activeWeaponId === definition.id) fireShot(shot);
     },
@@ -1427,6 +1424,20 @@ function selectWeapon(id) {
     globalThis.hijacked.viewmodel = viewmodel;
   }
   return activeWeaponId;
+}
+
+/** Swap a slot to an attachment-resolved definition (loadout.js). Refills the gun. */
+function applyWeaponDefinition(id, definition) {
+  const slot = weaponSlots.get(getWeapon(id)?.id);
+  if (!slot || definition.id !== slot.definition.id) return false;
+  slot.definition = definition;
+  slot.controller.configure(definition);
+  slot.viewmodel.reloadSpeed = definition.reloadSpeed;
+  slot.viewmodel.setAttachmentVisuals({
+    suppressor: definition.suppressed,
+    scope: definition.scope,
+  });
+  return true;
 }
 
 /** Load the viewmodels for these weapon ids (settles even when one fails). */
@@ -1792,6 +1803,7 @@ function fireShot({ triggerShotCount = 0 } = {}) {
     const hit = weaponEffects.fire(camera, collisionRoot, muzzle, {
       targets: combatants.hitTargets(),
       weapon: def.audio.shot,
+      audio: { rate: def.audio.rate, gain: def.audio.gain, suppressed: def.suppressed },
       spread,
       silent: i > 0,
     });
@@ -1917,6 +1929,8 @@ function getDebugState() {
       name: activeWeaponSlot.definition.name,
       class: activeWeaponSlot.definition.class,
       fireMode: activeWeaponSlot.definition.fireMode,
+      pellets: activeWeaponSlot.definition.pellets,
+      attachments: [...activeWeaponSlot.definition.attachments],
       loadout: { ...loadout },
       ready: viewmodel.ready,
       availableWeapons: [...weaponSlots.values()]
@@ -2463,6 +2477,7 @@ async function start() {
       weapons: {
         activeId: () => activeWeaponId,
         definition: (id) => getWeapon(id),
+        applyDefinition: applyWeaponDefinition,
         load: loadWeapons,
         setLoadout,
         loadout: () => ({ ...loadout }),
