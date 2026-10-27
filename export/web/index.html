@@ -308,6 +308,61 @@
     .fe-class-card { min-height: 104px; }
     .fe-class-art { height: 80px; }
   }
+  /* ---------- setup screen (map / mode / online) ---------- */
+  .fe-setup { display: none; width: min(900px, 94vw); flex-direction: column; gap: 10px; text-align: left; max-height: calc(100vh - 34px); overflow-y: auto; }
+  #blocker[data-screen="setup"] .fe-setup { display: flex; }
+  #blocker[data-screen="setup"] .fe-content { width: min(900px, 94vw); gap: 12px; }
+  #blocker[data-screen="setup"] .fe-wordmark { font-size: clamp(20px, 3vw, 30px); }
+  #blocker[data-screen="setup"] .fe-wordmark::after { margin-top: 14px; }
+  #blocker[data-screen="setup"] .fe-sub { display: none; }
+  .fe-setup-head { padding: 0 8px; }
+  .fe-setup-head .fe-heading { font-size: clamp(18px, 2.2vw, 27px); }
+  .fe-setup-label { margin: 4px 8px 0; color: rgba(206, 224, 240, .6); font-size: 11px; letter-spacing: .24em; text-transform: uppercase; }
+  .fe-setup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+  .fe-setup-card {
+    position: relative; appearance: none; border: 0; min-height: 64px; padding: 10px 12px; text-align: left;
+    color: #e6f2ff; background: rgba(7, 18, 26, .72); cursor: pointer; font: inherit; overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  }
+  .fe-setup-card::before, .fe-setup-card::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    -webkit-mask: url('ui/menu_mp_lobby_frame_outer.png') center/100% 100% no-repeat;
+    mask: url('ui/menu_mp_lobby_frame_outer.png') center/100% 100% no-repeat;
+  }
+  .fe-setup-card::before { background: rgba(139, 173, 198, .22); }
+  .fe-setup-card::after {
+    -webkit-mask-image: url('ui/menu_select_highlight.png'); mask-image: url('ui/menu_select_highlight.png');
+    background: var(--fe-accent); opacity: 0; transition: opacity .12s ease-out;
+  }
+  .fe-setup-card:hover::before, .fe-setup-card:focus-visible::before { background: rgba(127, 255, 196, .34); }
+  .fe-setup-card:focus-visible { outline: none; }
+  .fe-setup-card[data-selected="true"]::after { opacity: .7; }
+  .fe-setup-card img { position: relative; z-index: 1; display: block; width: 100%; height: 70px; object-fit: cover; opacity: .9; }
+  .fe-setup-card strong { position: relative; z-index: 1; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; }
+  .fe-setup-card small { position: relative; z-index: 1; color: rgba(206, 224, 240, .54); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; }
+  .fe-online { display: flex; flex-direction: column; gap: 6px; }
+  .fe-online[hidden] { display: none; }
+  .fe-online-row { display: flex; gap: 8px; align-items: center; padding: 0 8px; }
+  .fe-online-row input {
+    flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid rgba(183, 222, 201, .33); border-radius: 3px;
+    background: rgba(7, 18, 26, .8); color: #edf9f5; font: 600 13px var(--fe-ui); letter-spacing: .12em; text-transform: uppercase;
+  }
+  .fe-online-row .fe-btn { flex: none; width: 180px; }
+  @media (max-width: 560px) { .fe-online-row { flex-wrap: wrap; } .fe-online-row .fe-btn { width: 100%; } }
+  .hud-minimap-dot { position: absolute; width: 26px; height: 26px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+  #system-layer { position: fixed; inset: 0; z-index: 2; pointer-events: none; }
+  #system-notice {
+    position: fixed; z-index: 3; left: 50%; top: 30%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+    padding: 8px 18px; max-width: 80vw; color: #eef8ff; background: rgba(3, 10, 14, .72); border-left: 2px solid var(--fe-accent);
+    font: 600 14px/1.3 var(--fe-ui); letter-spacing: .12em; pointer-events: none; opacity: 0; transition: opacity .2s ease-out;
+  }
+  #system-notice.show { opacity: 1; }
+  #system-notice img { width: 28px; height: 28px; object-fit: contain; }
+  #match-status .teams { display: block; font-size: 13px; letter-spacing: .14em; }
+  #match-status .teams .allies { color: #7fd0ff; } #match-status .teams .axis { color: #ff8b7a; }
+  .killfeed-entry img { height: 14px; vertical-align: -2px; margin: 0 4px; }
+  .scoreboard-team { padding: 8px 10px 4px; color: rgba(220, 235, 245, .8); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; border-top: 1px solid rgba(160, 200, 220, .3); }
+  .scoreboard-team.allies { color: #7fd0ff; } .scoreboard-team.axis { color: #ff8b7a; }
   /* Kept as the automation-visible text snapshot (getState().hud) but hidden;
      the visible HUD below is drawn with the game's own art. */
   #hud {
@@ -497,12 +552,13 @@
     </div>
     <div class="fe-start">
       <figure class="fe-card">
-        <img src="ui/menu_mp_map_select_hijacked_final.png" alt="Hijacked" width="256" height="128">
-        <figcaption>mp_hijacked</figcaption>
+        <img id="fe-map-card" src="ui/menu_mp_map_select_hijacked_final.png" alt="Hijacked" width="256" height="128">
+        <figcaption id="fe-map-caption">mp_hijacked</figcaption>
       </figure>
       <div class="fe-start-foot">
         <p class="fe-prompt">Click to play</p>
         <button type="button" class="fe-btn" data-action="class">Create a class</button>
+        <button type="button" class="fe-btn" data-action="setup">Map &amp; mode</button>
         <p class="fe-count" id="fe-count" hidden></p>
       </div>
     </div>
@@ -511,6 +567,7 @@
       <div class="fe-buttons">
         <button type="button" class="fe-btn" data-action="resume">Resume</button>
         <button type="button" class="fe-btn" data-action="class">Create a class</button>
+        <button type="button" class="fe-btn" data-action="setup">Map &amp; mode</button>
         <button type="button" class="fe-btn" data-action="respawn">Respawn</button>
         <button type="button" class="fe-btn" data-action="navmesh">Navmesh overlay</button>
         <button type="button" class="fe-btn" data-action="collision">Collision overlay</button>
@@ -525,46 +582,35 @@
         <p class="fe-class-selection" id="fe-class-selection">Select a rifle</p>
       </div>
       <div class="fe-class-grid">
-        <button type="button" class="fe-class-card" data-weapon-id="m27">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_hk416_big.png" alt="M27"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_auto.png" alt="Automatic"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="an94">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_an94_big.png" alt="AN-94"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_auto.png" alt="Automatic"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="sa58">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_sa58_big.png" alt="FAL OSW"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_single.png" alt="Single"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="saritch">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_saritch_big.png" alt="SMR"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_single.png" alt="Single"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="scar">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_scar_big.png" alt="SCAR-H"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_auto.png" alt="Automatic"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="sig556">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_sig556_big.png" alt="SWAT-556"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_burst.png" alt="Burst"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="tar21">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_tar21_big.png" alt="MTAR"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_auto.png" alt="Automatic"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="type95">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_type95_big.png" alt="Type 25"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_auto.png" alt="Automatic"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
-        <button type="button" class="fe-class-card" data-weapon-id="xm8">
-          <span class="fe-class-art"><img data-card-art src="ui/menu_mp_weapons_xm8_big.png" alt="M8A1"></span>
-          <span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong><span class="fe-class-role">Assault rifle</span><span class="fe-class-stats"><span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type src="ui/hud/hud_mp_firerate_burst.png" alt="Burst"><b data-card-rpm></b> RPM</span><span class="fe-class-stat"><b data-card-mag></b> MAG</span><span class="fe-class-stat"><b data-card-damage></b> DMG</span></span><span class="fe-class-state" data-card-state>loading</span></span>
-        </button>
       </div>
       <div class="fe-class-actions">
         <button type="button" class="fe-btn" data-action="class-confirm">Equip rifle</button>
         <button type="button" class="fe-btn" data-action="class-back">Back</button>
+      </div>
+    </section>
+    <section class="fe-setup" aria-label="Map and mode">
+      <div class="fe-setup-head">
+        <h2 class="fe-heading">Map &amp; mode</h2>
+        <p class="fe-class-sub">Applying reloads the game</p>
+      </div>
+      <p class="fe-setup-label">Map</p>
+      <div class="fe-setup-grid" id="fe-setup-maps"></div>
+      <p class="fe-setup-label">Mode</p>
+      <div class="fe-setup-grid" id="fe-setup-modes"></div>
+      <div class="fe-online" id="fe-online" hidden>
+        <p class="fe-setup-label">Online</p>
+        <div class="fe-online-row">
+          <input id="fe-online-name" type="text" maxlength="16" placeholder="Name" autocomplete="off" spellcheck="false" aria-label="Player name">
+          <button type="button" class="fe-btn" data-action="online-create">Create room</button>
+        </div>
+        <div class="fe-online-row">
+          <input id="fe-online-room" type="text" maxlength="8" placeholder="Room code" autocomplete="off" spellcheck="false" aria-label="Room code">
+          <button type="button" class="fe-btn" data-action="online-join">Join room</button>
+        </div>
+      </div>
+      <div class="fe-class-actions">
+        <button type="button" class="fe-btn" data-action="setup-apply">Apply</button>
+        <button type="button" class="fe-btn" data-action="setup-back">Back</button>
       </div>
     </section>
     <pre class="fe-controls" id="fe-controls"></pre>
@@ -592,14 +638,16 @@
 <div id="death-card"><strong id="death-killer"></strong><span id="respawn-copy"></span></div>
 <div id="scoreboard">
   <div class="scoreboard-panel">
-    <h2>Free for all</h2>
+    <h2 id="scoreboard-title">Free for all</h2>
     <p id="match-result"></p>
-    <div class="scoreboard-row head"><span>#</span><span>Player</span><span>Kills</span><span>Deaths</span></div>
+    <div class="scoreboard-row head"><span>#</span><span>Player</span><span id="scoreboard-score-label">Kills</span><span>Deaths</span></div>
     <div id="scoreboard-rows"></div>
     <button type="button" class="fe-btn touch-only" id="touch-score-close">Back to game</button>
     <button type="button" class="fe-btn touch-only" id="touch-restart" hidden>Play again</button>
   </div>
 </div>
+<div id="system-layer"></div>
+<div id="system-notice" role="status"></div>
 <div id="crosshair"></div>
 <svg id="hitmarker" viewBox="0 0 26 26" data-kind="torso" aria-hidden="true">
   <line x1="3" y1="3" x2="9" y2="9"></line>
@@ -620,6 +668,8 @@
   <button type="button" class="touch-button touch-crouch" data-touch="crouch" aria-label="Toggle crouch" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="m12 8-3 5 7 2-2 6m-3-11 5 2h4M9 13l-5 5h6"/></svg><span>CROUCH</span></button>
   <button type="button" class="touch-button touch-reload" data-touch="reload" aria-label="Reload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg><span>RELOAD</span></button>
   <button type="button" class="touch-button touch-scores" id="touch-scores" aria-label="Show scoreboard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h4v10m2 0V4h4v16m2 0V7h4v13"/></svg></button>
+  <button type="button" class="touch-button touch-swap" data-touch="swap" aria-label="Swap weapon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3m3 13H7l3 3"/></svg></button>
+  <button type="button" class="touch-button touch-streak" data-touch="streak" aria-label="Use killstreak" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg></button>
   <button type="button" class="touch-button touch-pause" id="touch-pause" aria-label="Pause game"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
 </div>
 <script>
@@ -651,7 +701,6 @@ import { WeaponController } from './weapon-controller.js';
 import { WeaponEffects } from './weapon-effects.js';
 import { EnemyManager } from './enemy-system.js';
 import { PlayerHealth } from './player-health.js';
-import { FreeForAllMatch } from './free-for-all-match.js';
 import { MedalTracker } from './medals.js';
 import { Hud } from './hud.js';
 import { Frontend } from './frontend.js';
@@ -664,6 +713,28 @@ import { loadCollisionWorld } from './collision-world.js';
 import { optimizeStaticScene } from './scene-optimizer.js';
 import { applyEnvironmentLighting, loadGradeLut, POST_SHADER, HAZE, applyMaterialClasses } from './lighting.js';
 import { loadProbeVolume, attachObjectProbe } from './light-probes.js';
+import { WEAPONS, getWeapon, damageFor } from './weapons.js';
+import { loadMap, listMaps, synthesiseHints } from './maps.js';
+import { MODES, PLAYER_RULES, getMode } from './modes.js';
+import { readGameConfig, saveSetup, setupUrl } from './game-config.js';
+import { EVENTS, createEventBus } from './game-events.js';
+import { Combatants } from './combatants.js';
+import { system as net } from './net-play.js';
+import { system as modeRules } from './mode-rules.js';
+import { system as loadoutSystem } from './loadout.js';
+import { system as killstreaks } from './killstreaks.js';
+import { system as progression } from './progression.js';
+import { system as killcam } from './killcam.js';
+
+const DEFAULT_BACKGROUND = 0x87a8c8;
+const storage = (() => { try { return window.localStorage; } catch { return null; } })();
+const config = readGameConfig(location.search, storage);
+const mode = getMode(config.modeId);
+const bus = createEventBus();
+const combatants = new Combatants({ bus });
+// Update order is part of the contract (PLAN.md 3.4).
+const systems = [net, modeRules, loadoutSystem, killstreaks, progression, killcam];
+let map = null;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87a8c8);
@@ -691,237 +762,7 @@ const graphicsRenderer = new GraphicsRenderer(renderer);
 document.body.appendChild(renderer.domElement);
 
 const VIEWMODEL_HANDS = 'viewmodel/c_usa_mp_fbi_shortsleeve_viewhands_lod0.glb';
-const WEAPON_DEFINITIONS = Object.freeze({
-  m27: Object.freeze({
-    id: 'm27',
-    name: 'M27',
-    slot: 1,
-    magazineSize: 30,
-    reserveAmmo: 240,
-    roundsPerMinute: 750,
-    damage: 33,
-    fireTypeIcon: 'hud_mp_firerate_auto',
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_hk416_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_hk416_view_lod0.glb',
-    // Authored attachment offset from the shipped hk416_mp weapon file.
-    magazineOffset: Object.freeze([3.389, 0, -0.383]),    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_hk416_idle.json',
-      fire: 'viewmodel/anims/viewmodel_hk416_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_hk416_ads_fire.json',
-      reload: 'viewmodel/anims/viewmodel_hk416_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_hk416_reload_empty.json',
-    }),
-  }),
-  an94: Object.freeze({
-    id: 'an94',
-    name: 'AN-94',
-    slot: 2,
-    magazineSize: 30,
-    reserveAmmo: 240,
-    roundsPerMinute: 625,
-    initialRoundsPerMinute: 937.5,
-    initialShotCount: 2,
-    damage: 40,
-    fireTypeIcon: 'hud_mp_firerate_auto',
-    adsFov: 50,
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_an94_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_an94_view_lod0.glb',
-    // Authored attachment offsets from the shipped an94_mp weapon file.
-    magazineOffset: Object.freeze([4.473, -1.085, -1.5]),
-    // T6's roll is around the weapon's forward X axis. The GLB weld applies
-    // the engine-to-view transform after this attachment transform.
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(-15), 0, 0]),    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_an94_idle.json',
-      introFire: 'viewmodel/anims/viewmodel_an94_intro_fire.json',
-      fire: 'viewmodel/anims/viewmodel_an94_fire.json',
-      introAdsFire: 'viewmodel/anims/viewmodel_an94_intro_ads_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_an94_ads_fire.json',
-      reload: 'viewmodel/anims/viewmodel_an94_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_an94_reload_empty.json',
-    }),
-  }),
-  sa58: Object.freeze({
-    id: "sa58",
-    name: "FAL OSW",
-    slot: 3,
-    magazineSize: 25,
-    reserveAmmo: 240,
-    roundsPerMinute: 625,
-    damage: 55,
-    fireTypeIcon: "hud_mp_firerate_single",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_sa58_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_sa58_view_lod0.glb',
-    // Authored attachment offset from the shipped sa58_mp weapon file.
-    magazineOffset: Object.freeze([4.006, 0.015, 1.821]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_sa58_idle.json',
-      fire: 'viewmodel/anims/viewmodel_sa58_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_sa58_ads_fire.json',
-      reload: 'viewmodel/anims/viewmodel_sa58_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_sa58_reload_empty.json',
-    }),
-  }),
-  saritch: Object.freeze({
-    id: "saritch",
-    name: "SMR",
-    slot: 4,
-    magazineSize: 20,
-    reserveAmmo: 240,
-    roundsPerMinute: 536,
-    damage: 50,
-    fireTypeIcon: "hud_mp_firerate_single",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_saritch_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_saritch_view_lod0.glb',
-    // Authored attachment offset from the shipped saritch_mp weapon file.
-    magazineOffset: Object.freeze([-8.907, 0, -2.646]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),
-    // This rig ships no tritium insert, so findSightTip has nothing to measure
-    // and the sight line has to be given to it. Measured off the shipped model
-    // with `node .tools/measure_sights.mjs saritch`; points are in j_gun space.
-    // The tool reads the top of each sight, which is right for the post-and-notch
-    // irons it was calibrated on but sits above the aperture on this gun's ring
-    // sights, so the picture rendered 60px low. Both points are dropped by the
-    // same 0.281 to recentre it: an equal shift translates the sight picture
-    // without turning the sight line, so the slope the tool checks is unchanged.
-    adsSightAnchors: Object.freeze({
-      front: Object.freeze([12.672, 0, 3.643]),
-      rear: Object.freeze([-2.547, 0, 3.958]),
-    }),
-    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_saritch_idle.json',
-      fire: 'viewmodel/anims/viewmodel_saritch_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_saritch_ads_fire.json',
-      reload: 'viewmodel/anims/viewmodel_saritch_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_saritch_reload_empty.json',
-    }),
-  }),
-  scar: Object.freeze({
-    id: "scar",
-    name: "SCAR-H",
-    slot: 5,
-    magazineSize: 30,
-    reserveAmmo: 240,
-    roundsPerMinute: 625,
-    damage: 40,
-    fireTypeIcon: "hud_mp_firerate_auto",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_scarh_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_scar_view_lod0.glb',
-    // Authored attachment offset from the shipped scar_mp weapon file.
-    magazineOffset: Object.freeze([3.716, 0, -0.345]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),
-    // No tritium insert, and this rig is the awkward one: its sight hood reaches
-    // the centreline and stands 0.54 above the post, so the obvious reading of
-    // the geometry measures the hood and tilts the sight line up toward the
-    // muzzle. measure_sights.mjs falls back to a narrow-blade search here.
-    adsSightAnchors: Object.freeze({
-      front: Object.freeze([13.515, 0, 4.846]),
-      rear: Object.freeze([-2.237, 0, 4.894]),
-    }),
-    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_scar_h_idle.json',
-      fire: 'viewmodel/anims/viewmodel_scar_h_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_scar_h_ads_fire.json',
-      reload: 'viewmodel/anims/viewmodel_scar_h_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_scar_h_reload_empty.json',
-    }),
-  }),
-  sig556: Object.freeze({
-    id: "sig556",
-    name: "SWAT-556",
-    slot: 6,
-    magazineSize: 30,
-    reserveAmmo: 240,
-    roundsPerMinute: 938,
-    damage: 40,
-    fireTypeIcon: "hud_mp_firerate_burst",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_sig556_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_sig556_view_lod0.glb',
-    // Authored attachment offset from the shipped sig556_mp weapon file.
-    magazineOffset: Object.freeze([5.663, -0.008, -0.815]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),
-    // No tritium insert on this rig either, and ring sights again, so the same
-    // 50px recentring applies: both points dropped by 0.234 off what
-    // `node .tools/measure_sights.mjs sig556` reads. See the SMR above.
-    adsSightAnchors: Object.freeze({
-      front: Object.freeze([19.739, 0, 4.921]),
-      rear: Object.freeze([1.044, 0, 5.239]),
-    }),
-    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_sig556_idle.json',
-      fire: 'viewmodel/anims/viewmodel_sig556_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_sig556_ads_fire.json',
-      introFire: 'viewmodel/anims/viewmodel_sig556_fire.json',
-      reload: 'viewmodel/anims/viewmodel_sig556_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_sig556_reload_empty.json',
-    }),
-  }),
-  tar21: Object.freeze({
-    id: "tar21",
-    name: "MTAR",
-    slot: 7,
-    magazineSize: 30,
-    reserveAmmo: 240,
-    roundsPerMinute: 750,
-    damage: 40,
-    fireTypeIcon: "hud_mp_firerate_auto",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_x95l_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_x95l_view_lod0.glb',
-    // Authored attachment offset from the shipped tar21_mp weapon file.
-    magazineOffset: Object.freeze([-9.754, 0, -0.04]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_tavor_idle.json',
-      fire: 'viewmodel/anims/viewmodel_tavor_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_tavor_ads_fire.json',
-      reload: 'viewmodel/anims/viewmodel_tavor_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_tavor_reload_empty.json',
-    }),
-  }),
-  type95: Object.freeze({
-    id: "type95",
-    name: "Type 25",
-    slot: 8,
-    magazineSize: 30,
-    reserveAmmo: 240,
-    roundsPerMinute: 938,
-    damage: 33,
-    fireTypeIcon: "hud_mp_firerate_auto",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_type95_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_type95_view_lod0.glb',
-    // Authored attachment offset from the shipped type95_mp weapon file.
-    magazineOffset: Object.freeze([-8.38, 0, -0.678]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_type95_ar_idle.json',
-      fire: 'viewmodel/anims/viewmodel_type95_ar_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_type95_ar_ads_fire.json',
-      introFire: 'viewmodel/anims/viewmodel_type95_ar_fire.json',
-      reload: 'viewmodel/anims/viewmodel_type95_ar_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_type95_ar_reload_empty.json',
-    }),
-  }),
-  xm8: Object.freeze({
-    id: "xm8",
-    name: "M8A1",
-    slot: 9,
-    magazineSize: 36,
-    reserveAmmo: 240,
-    roundsPerMinute: 1250,
-    damage: 35,
-    fireTypeIcon: "hud_mp_firerate_burst",
-    viewmodelUrl: 'viewmodel/t6_wpn_ar_xm8_view_lod0.glb',
-    magazineUrl: 'viewmodel/t6_attach_mag_xm8_view_lod0.glb',
-    // Authored attachment offset from the shipped xm8_mp weapon file.
-    magazineOffset: Object.freeze([4.212, 0, 0.279]),
-    magazineRotation: Object.freeze([THREE.MathUtils.degToRad(0), 0, 0]),    clips: Object.freeze({
-      idle: 'viewmodel/anims/viewmodel_xm8_idle.json',
-      fire: 'viewmodel/anims/viewmodel_xm8_fire.json',
-      adsFire: 'viewmodel/anims/viewmodel_xm8_ads_fire.json',
-      introFire: 'viewmodel/anims/viewmodel_xm8_fire.json',
-      reload: 'viewmodel/anims/viewmodel_xm8_reload.json',
-      reloadEmpty: 'viewmodel/anims/viewmodel_xm8_reload_empty.json',
-    }),
-  }),
-});
-const weaponSlots = new Map(Object.values(WEAPON_DEFINITIONS).map((definition) => {
+const weaponSlots = new Map(Object.values(WEAPONS).map((definition) => {
   const slotViewmodel = new Viewmodel({
     adsFov: definition.adsFov ?? 55,
     adsSightAnchors: definition.adsSightAnchors ?? null,
@@ -929,12 +770,13 @@ const weaponSlots = new Map(Object.values(WEAPON_DEFINITIONS).map((definition) =
   slotViewmodel.setSize(innerWidth, innerHeight);
   return [definition.id, { definition, viewmodel: slotViewmodel, controller: null }];
 }));
-let activeWeaponId = 'm27';
+// The default class stays m27/an94: the harness and ai:life rely on it.
+const loadout = { primary: 'm27', secondary: 'an94' };
+let activeWeaponId = loadout.primary;
 let activeWeaponSlot = weaponSlots.get(activeWeaponId);
 let viewmodel = activeWeaponSlot.viewmodel;
 const viewBob = new ViewBob();
 let weapon = null;
-const WEAPON_ALIASES = Object.freeze({ hk416: 'm27' });
 
 // The prefiltered reflection probe supplies ambient and specular, so the
 // analytic lights only need to carve out direction. Both are turned down from
@@ -966,7 +808,8 @@ let probeVolumeStarted = false;
 function beginProbeVolume() {
   if (probeVolumeStarted) return;
   probeVolumeStarted = true;
-  loadProbeVolume()
+  if (!map.probes) return;
+  loadProbeVolume(map.probes)
     .then((volume) => {
       probeVolume = volume;
       hemi.intensity = 0;
@@ -1067,7 +910,8 @@ function setGraphicsPreset(preset) {
   return graphics.preset;
 }
 
-loadGradeLut().then((lut) => {
+function loadGradePass(lutUrl) {
+  return loadGradeLut(lutUrl).then((lut) => {
   gradeTarget = new THREE.WebGLRenderTarget(1, 1, {
     type: THREE.HalfFloatType,
     depthBuffer: true,
@@ -1094,7 +938,8 @@ loadGradeLut().then((lut) => {
   gradeMaterial.uniforms.exposure.value = renderer.toneMappingExposure;
   if (visionTone) applyVisionTone(gradeMaterial, visionTone);
   console.info(`post: tone map + ${lut ? 'vision-set LUT' : 'no LUT'}, exposure ${renderer.toneMappingExposure}`);
-});
+  });
+}
 
 // Sky, probe, tone mapping and fog tint all come from the map's own assets.
 // See export/web/lighting.js and .tools/bake_env.mjs.
@@ -1107,7 +952,9 @@ let environmentReady = null;
 function loadEnvironment() {
   if (environmentReady) return environmentReady;
   beginProbeVolume();
-  environmentReady = applyEnvironmentLighting(renderer, scene)
+  environmentReady = applyEnvironmentLighting(renderer, scene, {
+    envPath: map.lighting.env, probePath: map.lighting.probe, visionUrl: map.lighting.vision,
+  })
     .then((applied) => {
       lightingApplied = applied;
       // Feed the vision set's split tone into the post pass once it is built.
@@ -1140,18 +987,30 @@ function loadEnvironment() {
 
 const blocker = document.getElementById('blocker');
 const menuButtons = [...blocker.querySelectorAll('.fe-btn')];
+// Class cards are generated from the weapon registry (same DOM classes as the
+// hand-written cards they replaced). Lane A owns this block.
+const CLASS_ROLES = Object.freeze({ ar: 'Assault rifle', smg: 'Submachine gun', sniper: 'Sniper rifle', shotgun: 'Shotgun' });
+const FIRE_ALT = Object.freeze({ auto: 'Automatic', semi: 'Semi-automatic', burst: 'Burst', bolt: 'Bolt action', pump: 'Pump action' });
+const classGrid = blocker.querySelector('.fe-class-grid');
+for (const definition of Object.values(WEAPONS)) {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'fe-class-card';
+  card.dataset.weaponId = definition.id;
+  card.innerHTML = '<span class="fe-class-art"><img data-card-art alt=""></span>' +
+    '<span class="fe-class-info"><strong class="fe-class-name" data-card-name></strong>' +
+    '<span class="fe-class-role" data-card-role></span><span class="fe-class-stats">' +
+    '<span class="fe-class-stat"><img class="fe-class-fire" data-card-fire-type alt=""><b data-card-rpm></b> RPM</span>' +
+    '<span class="fe-class-stat"><b data-card-mag></b> MAG</span>' +
+    '<span class="fe-class-stat"><b data-card-damage></b> DMG</span></span>' +
+    '<span class="fe-class-state" data-card-state>loading</span></span>';
+  classGrid.appendChild(card);
+}
 const classCards = [...blocker.querySelectorAll('.fe-class-card')];
-const WEAPON_CARD_ART = Object.freeze({
-  m27: 'hk416',
-  an94: 'an94',
-  sa58: 'sa58',
-  saritch: 'saritch',
-  scar: 'scar',
-  sig556: 'sig556',
-  tar21: 'tar21',
-  type95: 'type95',
-  xm8: 'xm8',
-});
+const setupMaps = document.getElementById('fe-setup-maps');
+const setupModes = document.getElementById('fe-setup-modes');
+const setupName = document.getElementById('fe-online-name');
+const setupRoom = document.getElementById('fe-online-room');
 const frontend = new Frontend({
   waitingForInput: blocker.dataset.screen === 'welcome',
   elements: {
@@ -1163,6 +1022,11 @@ const frontend = new Frontend({
     controls: document.getElementById('fe-controls'),
     buttons: menuButtons,
     classCards,
+    setupMaps,
+    setupModes,
+    setupName,
+    setupRoom,
+    setupOnline: document.getElementById('fe-online'),
     classSelection: document.getElementById('fe-class-selection'),
     classConfirm: blocker.querySelector('[data-action="class-confirm"]'),
     onAction: (name) => menuAction(name),
@@ -1171,34 +1035,67 @@ const frontend = new Frontend({
   onResume: () => requestPlay(),
   onSelectWeapon: (id) => selectWeapon(id),
   onOpenClass: () => loadAllWeaponSlots(),
+  onApplySetup: (choice) => applySetup(choice),
 });
-frontend.setWeapons(Object.values(WEAPON_DEFINITIONS).map((definition) => ({
+setupName.value = config.name;
+frontend.setSetup({ mapId: config.mapId, modeId: config.modeId, name: config.name, online: Boolean(config.serverUrl) });
+frontend.setWeapons(Object.values(WEAPONS).map((definition) => ({
   id: definition.id,
   name: definition.name,
   ready: false,
 })), activeWeaponId);
 for (const card of classCards) {
-  const definition = WEAPON_DEFINITIONS[card.dataset.weaponId];
+  const definition = WEAPONS[card.dataset.weaponId];
   if (!definition) continue;
-  const artId = WEAPON_CARD_ART[definition.id] ?? definition.id;
   const art = card.querySelector('[data-card-art]');
   const fireType = card.querySelector('[data-card-fire-type]');
-  const name = card.querySelector('[data-card-name]');
-  const rpm = card.querySelector('[data-card-rpm]');
-  const magazine = card.querySelector('[data-card-mag]');
-  const damage = card.querySelector('[data-card-damage]');
+  const role = card.querySelector('[data-card-role]');
   if (art) {
-    art.src = `ui/menu_mp_weapons_${artId}_big.png`;
+    art.src = `ui/menu_mp_weapons_${definition.art}_big.png`;
     art.alt = definition.name;
   }
   if (fireType) {
     fireType.src = `ui/hud/${definition.fireTypeIcon}.png`;
-    fireType.alt = definition.fireTypeIcon.replace('hud_mp_firerate_', '');
+    fireType.alt = FIRE_ALT[definition.fireTypeIcon.replace('hud_mp_firerate_', '')] ?? definition.fireTypeIcon;
   }
-  if (name) name.textContent = definition.name;
-  if (rpm) rpm.textContent = definition.roundsPerMinute;
-  if (magazine) magazine.textContent = definition.magazineSize;
-  if (damage) damage.textContent = definition.damage;
+  if (role) role.textContent = CLASS_ROLES[definition.class] ?? definition.class;
+  card.querySelector('[data-card-name]').textContent = definition.name;
+  card.querySelector('[data-card-rpm]').textContent = definition.roundsPerMinute;
+  card.querySelector('[data-card-mag]').textContent = definition.magazineSize;
+  card.querySelector('[data-card-damage]').textContent = definition.damage;
+}
+
+// Setup screen: map cards come from listMaps() once the game has booted, mode
+// cards straight from the registry. Applying saves the choice and reloads.
+function buildSetupCard(dataKey, id, name, detail, image = null) {
+  const card = document.createElement('button');
+  card.type = 'button';
+  card.className = 'fe-setup-card';
+  card.dataset[dataKey] = id;
+  if (image) {
+    const img = document.createElement('img');
+    img.src = image;
+    img.alt = '';
+    card.append(img);
+  }
+  const title = document.createElement('strong');
+  title.textContent = name;
+  const small = document.createElement('small');
+  small.textContent = detail;
+  card.append(title, small);
+  return card;
+}
+setupModes.replaceChildren(...Object.values(MODES).map((entry) => buildSetupCard(
+  'modeId', entry.id, entry.name, `${entry.teams ? 'Teams' : 'Everyone for themselves'}${entry.online ? '' : ' · offline'}`)));
+function applySetup({ mapId, modeId, name, room }) {
+  let target = room;
+  if (target) {
+    target = String(target).toUpperCase();
+    if (target !== 'NEW' && !/^[A-Z0-9]{4,8}$/.test(target)) return false;
+  }
+  saveSetup(storage, { mapId, modeId, name });
+  location.assign(setupUrl(location.href, { mapId, modeId, room: target || null }));
+  return true;
 }
 
 // The title-screen play counter. It fetches on its own and is never awaited by
@@ -1240,14 +1137,8 @@ const respawnCopy = document.getElementById('respawn-copy');
 const scoreboard = document.getElementById('scoreboard');
 const scoreboardRows = document.getElementById('scoreboard-rows');
 const matchResult = document.getElementById('match-result');
-const hudArt = new Hud({
-  minimap: document.getElementById('hud-minimap'),
-  compass: document.getElementById('hud-compass'),
-  ammoRow: document.getElementById('hud-ammo-row'),
-  weaponName: document.getElementById('hud-weapon-name'),
-  damage: damageOverlay,
-});
-const lastEnemyShots = new Map();
+// Built in start() once the map (and so the minimap calibration) is known.
+let hudArt = null;
 const keys = Object.create(null);
 const clock = new THREE.Clock();
 const bootStartedAt = performance.now();
@@ -1290,8 +1181,9 @@ const medalPopups = [];
 const MEDAL_HOLD_SECONDS = 2.1;
 const MEDAL_FADE_SECONDS = 0.45;
 
-const match = new FreeForAllMatch({ scoreLimit: 30, timeLimitSeconds: 300 });
-match.register('player', 'YOU', { human: true });
+const match = mode.createMatch();
+match.register('player', 'YOU', { human: true, team: mode.teams ? 'allies' : null });
+let inputCapture = null; // owner name of an exclusive input capture (air-strike targeting etc.)
 
 const touchControls = new TouchControls({
   root: document.getElementById('touch-controls'),
@@ -1300,7 +1192,12 @@ const touchControls = new TouchControls({
     // CSS pixels make the same thumb gesture independent of device DPI.
     applyLook(x, y, 0.005 * sensitivity * (viewmodel.aiming ? 0.5 : 1));
   },
-  onAction: (action) => { if (canControlPlayer() && action === 'reload') reloadWeapon(); },
+  onAction: (action) => {
+    if (!canControlPlayer()) return;
+    if (action === 'reload') reloadWeapon();
+    else if (action === 'swap') swapWeapon();
+    else for (const system of systems) if (system.onTouchAction(action)) break;
+  },
   onModeChange: () => {
     graphics.mobile = true;
     applyGraphicsSettings();
@@ -1380,9 +1277,11 @@ document.getElementById('touch-restart').addEventListener('click', () => {
   requestPlay();
 });
 
-function canControlPlayer() {
+// `ignoreCapture` lets movement continue while a system owns look/fire input.
+function canControlPlayer(ignoreCapture = false) {
   return ready && locked && !frontend.visible && !automationPaused &&
-    !(touchControls.mode && scoreboardHeld) && match.phase === 'playing' && !playerHealth?.dead;
+    !(touchControls.mode && scoreboardHeld) && match.phase === 'playing' && !playerHealth?.dead &&
+    !killcam.isPlaying() && (ignoreCapture || !inputCapture);
 }
 
 function applyLook(x, y, sensitivity = 0.0022) {
@@ -1421,6 +1320,8 @@ function suspendPlay() {
 
 function updateControlHints() {
   if (!ready) return;
+  const primaryName = getWeapon(loadout.primary)?.name ?? '';
+  const secondaryName = loadout.secondary ? getWeapon(loadout.secondary)?.name : null;
   frontend.controls = touchControls.mode ? [
     'Left thumb move · Right thumb swipe to look',
     'Hold FIRE and drag to aim · JUMP · RELOAD',
@@ -1428,7 +1329,7 @@ function updateControlHints() {
   ] : [
     'WASD move · Shift sprint · Space jump · C/Ctrl crouch',
     'Left mouse fire · Right mouse aim · R reload · B respawn',
-    '1 M27 · 2 AN-94 · Create a class from the menu',
+    `1 ${primaryName}${secondaryName ? ` · 2 ${secondaryName}` : ''} · Create a class from the menu`,
     'K cycle camo · N navmesh · V collision · P path · Esc pause',
   ];
   frontend.render();
@@ -1500,7 +1401,7 @@ function loadAllWeaponSlots() {
 
 function selectWeapon(id) {
   const requested = String(id).toLowerCase();
-  const next = weaponSlots.get(WEAPON_ALIASES[requested] ?? requested);
+  const next = weaponSlots.get(getWeapon(requested)?.id);
   if (!next?.controller || !next.viewmodel.ready) return false;
   if (next === activeWeaponSlot) return activeWeaponId;
 
@@ -1528,6 +1429,32 @@ function selectWeapon(id) {
   return activeWeaponId;
 }
 
+/** Load the viewmodels for these weapon ids (settles even when one fails). */
+function loadWeapons(ids) {
+  const slots = [...new Set(ids.filter(Boolean).map((id) => getWeapon(id)?.id))]
+    .map((id) => weaponSlots.get(id)).filter(Boolean);
+  return Promise.all(slots.map((slot) => loadWeaponSlot(slot)));
+}
+
+async function setLoadout({ primary, secondary = null } = {}) {
+  const first = getWeapon(primary)?.id;
+  const second = secondary ? getWeapon(secondary)?.id ?? null : null;
+  if (!first || (secondary && !second)) return false;
+  await loadWeapons([first, second]);
+  if (![first, second].filter(Boolean).every((id) => weaponSlots.get(id)?.viewmodel.ready)) return false;
+  loadout.primary = first;
+  loadout.secondary = second;
+  selectWeapon(first);
+  updateControlHints();
+  return true;
+}
+
+// Touch swap button: flip between the two slots of the loadout.
+function swapWeapon() {
+  const next = activeWeaponId === loadout.primary ? loadout.secondary : loadout.primary;
+  return next ? selectWeapon(next) : false;
+}
+
 const pathGeometry = new THREE.BufferGeometry();
 const pathLine = new THREE.Line(
   pathGeometry,
@@ -1540,10 +1467,8 @@ function progress(name, event) {
   frontend.progress(name, event);
 }
 
-function combatantId(actor) {
-  if (!actor) return null;
-  return actor === player ? 'player' : Number.isInteger(actor.index) ? `bot-${actor.index}` : null;
-}
+const combatantId = (actor) => combatants.idOf(actor);
+const actorOf = (id) => combatants.get(id)?.actor ?? null;
 
 function resetPlayerLife() {
   clearKeys();
@@ -1568,6 +1493,8 @@ function resetPlayerLife() {
 
 function restartMatch() {
   match.reset();
+  for (const system of systems) system.reset();
+  bus.emit(EVENTS.MATCH, { phase: 'playing', winnerId: null, winnerTeam: null });
   medals?.reset();
   for (const { popup } of medalPopups) popup.remove();
   medalPopups.length = 0;
@@ -1579,12 +1506,98 @@ function restartMatch() {
   renderMatchUi();
 }
 
+// ---------- kill funnel ----------
+// Every kill ends up in recordKillEvent(): offline through reportKill() (built
+// from Combatants.lastHit), online through the server's `kill` message (net-play).
+let lastKill = null;
+bus.on(EVENTS.KILL, (event) => { lastKill = event; });
+
+function recordKillEvent(event) {
+  match.recordKill(event.killerId, event.victimId, event);
+  bus.emit(EVENTS.KILL, event);
+  // Bot-on-bot kills stay out of the human player's medal chain.
+  if (medals && event.killerId === 'player' && event.victimId !== 'player') {
+    for (const def of medals.onKill()) showMedalPopup(def);
+  }
+  return event;
+}
+
+function reportKill(victimId, fallbackKillerId = null) {
+  const last = combatants.lastHit(victimId);
+  const killerId = last ? last.attackerId : fallbackKillerId;
+  const position = (id) => {
+    const point = id ? combatants.get(id)?.position() : null;
+    return point ? vectorArray(point) : null;
+  };
+  return recordKillEvent({
+    killerId,
+    victimId,
+    weaponId: last?.weaponId ?? null,
+    cause: last?.cause ?? (killerId ? 'bullet' : 'environment'),
+    region: last?.region ?? null,
+    victimPosition: position(victimId) ?? [0, 0, 0],
+    killerPosition: position(killerId),
+    at: performance.now() / 1000,
+  });
+}
+
+// ---------- system context helpers ----------
+const systemNotice = document.getElementById('system-notice');
+let noticeLife = 0;
+
+function notify(text, { icon = null, seconds = 2.5 } = {}) {
+  systemNotice.replaceChildren();
+  if (icon) {
+    const image = document.createElement('img');
+    image.src = icon;
+    image.alt = '';
+    systemNotice.append(image);
+  }
+  systemNotice.append(document.createTextNode(String(text)));
+  systemNotice.classList.add('show');
+  noticeLife = seconds;
+}
+
+function captureInput(owner) {
+  if (owner && inputCapture && inputCapture !== owner) return false;
+  inputCapture = owner || null;
+  if (inputCapture) {
+    // A capture takes over the mouse: drop anything held from before it began.
+    mouseFire = mouseAim = false;
+    weapon?.setTrigger(false);
+    viewmodel.setAiming(false);
+  }
+  return true;
+}
+
+const OBIT_ICONS = Object.freeze({ airstrike: 'hud_obit_airstrike', crate: 'hud_obit_crate', hunter: 'hud_obit_hk_drone' });
+const scoreboardTitle = document.getElementById('scoreboard-title');
+const scoreboardScoreLabel = document.getElementById('scoreboard-score-label');
+
+function scoreboardRow(entry, scoreLabelValue) {
+  const row = document.createElement('div');
+  row.className = `scoreboard-row${entry.human ? ' player' : ''}`;
+  for (const value of [entry.place, entry.name, scoreLabelValue, entry.deaths]) {
+    const cell = document.createElement('span');
+    cell.textContent = value;
+    row.appendChild(cell);
+  }
+  return row;
+}
+
 function renderMatchUi() {
   const state = match.getState();
   const playerEntry = state.standings.find((entry) => entry.id === 'player');
   const minutes = Math.floor(state.remainingSeconds / 60);
   const seconds = String(state.remainingSeconds % 60).padStart(2, '0');
-  matchStatus.innerHTML = `${playerEntry?.kills ?? 0} / ${state.scoreLimit} &nbsp; <small>${minutes}:${seconds} · #${playerEntry?.place ?? 1}</small>`;
+  const clockLine = `<small>${minutes}:${seconds} · #${playerEntry?.place ?? 1}</small>`;
+  if (state.teams) {
+    const [allies, axis] = ['allies', 'axis'].map((id) => state.teams.find((team) => team.id === id));
+    matchStatus.innerHTML = `<span class="teams"><span class="allies">ALLIES ${allies?.score ?? 0}</span> – ` +
+      `<span class="axis">${axis?.score ?? 0} AXIS</span></span>${clockLine}`;
+  } else {
+    matchStatus.innerHTML = `${playerEntry?.score ?? 0} / ${state.scoreLimit} &nbsp; ${clockLine}`;
+  }
 
   killfeed.replaceChildren(...state.feed.map((event) => {
     const row = document.createElement('div');
@@ -1592,25 +1605,41 @@ function renderMatchUi() {
     const killer = document.createElement('span');
     killer.className = 'killer';
     killer.textContent = event.killer;
-    row.append(killer, document.createTextNode(`  ›  ${event.victim}`));
-    return row;
-  }));
-
-  scoreboardRows.replaceChildren(...state.standings.map((entry) => {
-    const row = document.createElement('div');
-    row.className = `scoreboard-row${entry.human ? ' player' : ''}`;
-    for (const value of [entry.place, entry.name, entry.kills, entry.deaths]) {
-      const cell = document.createElement('span');
-      cell.textContent = value;
-      row.appendChild(cell);
+    const icon = OBIT_ICONS[event.cause];
+    if (icon) {
+      const image = document.createElement('img');
+      image.src = `ui/hud/${icon}.png`;
+      image.alt = event.cause;
+      row.append(killer, document.createTextNode('  '), image, document.createTextNode(event.victim));
+    } else {
+      row.append(killer, document.createTextNode(`  ›  ${event.victim}`));
     }
     return row;
   }));
+
+  scoreboardTitle.textContent = state.modeName;
+  scoreboardScoreLabel.textContent = state.scoreLabel;
+  const rows = [];
+  if (state.teams) {
+    for (const team of ['allies', 'axis']) {
+      const members = state.standings.filter((entry) => entry.team === team);
+      const header = document.createElement('div');
+      header.className = `scoreboard-team ${team}`;
+      header.textContent = `${team} · ${state.teams.find((entry) => entry.id === team)?.score ?? 0}`;
+      rows.push(header, ...members.map((entry) => scoreboardRow(entry, entry.score)));
+    }
+  } else {
+    rows.push(...state.standings.map((entry) => scoreboardRow(entry, entry.score)));
+  }
+  scoreboardRows.replaceChildren(...rows);
   const winner = state.standings.find((entry) => entry.id === state.winnerId);
+  const winnerLine = state.teams && state.winnerTeam
+    ? `${state.winnerTeam.toUpperCase()} win`
+    : winner?.id === 'player' ? 'VICTORY' : `${winner?.name ?? 'Unknown'} wins`;
   matchResult.textContent = state.phase === 'ended'
-    ? `${winner?.id === 'player' ? 'VICTORY' : `${winner?.name ?? 'Unknown'} wins`}${touchControls.mode ? '' : ' · press Enter to play again'}`
-    : `First to ${state.scoreLimit} kills${touchControls.mode ? '' : ' · hold Tab for scores'}`;
-  document.getElementById('touch-restart').hidden = state.phase !== 'ended';
+    ? `${winnerLine}${touchControls.mode || net.online ? '' : ' · press Enter to play again'}`
+    : `First to ${state.scoreLimit}${state.teams ? ' points' : ' kills'}${touchControls.mode ? '' : ' · hold Tab for scores'}`;
+  document.getElementById('touch-restart').hidden = state.phase !== 'ended' || net.online;
   document.getElementById('touch-score-close').hidden = state.phase === 'ended';
   scoreboard.classList.toggle('visible', scoreboardHeld || state.phase === 'ended');
 }
@@ -1640,6 +1669,7 @@ function showMedalPopup(def) {
   medalLayer.prepend(popup);
   requestAnimationFrame(() => popup.classList.add('show'));
   medalPopups.unshift({ popup, bornAt: performance.now() });
+  bus.emit(EVENTS.MEDAL, { ref: def.ref ?? null, name: def.name ?? def.ref ?? null, xp: def.xp ?? 0 });
   return popup;
 }
 
@@ -1698,10 +1728,12 @@ function loadGltf(url, label) {
   });
 }
 
+// playerStart -> the mode's spawn classes -> the map's fallback marker.
 function chooseSpawn(hints, collision) {
   const spawns = Array.isArray(hints?.spawns) ? hints.spawns : [];
-  const preferred = spawns.find((spawn) => spawn.classname === 'mp_dm_spawn') ?? spawns[0];
-  const marker = preferred?.position ?? [2102, 57, 133];
+  const byClass = mode.spawnClasses.map((name) => spawns.find((spawn) => spawn.classname === name)).find(Boolean);
+  const preferred = map.playerStart ?? byClass ?? spawns[0];
+  const marker = preferred?.position ?? map.fallbackSpawn ?? [0, 60, 0];
   const spawn = new THREE.Vector3(marker[0], marker[1], marker[2]);
 
   // Radiant spawn entities may sit above their floor. Find the first surface
@@ -1729,6 +1761,7 @@ function showPathToCrosshair() {
 }
 
 function clearKeys() {
+  inputCapture = null; // Esc, the pause menu and death always release an exclusive capture
   for (const code of Object.keys(keys)) keys[code] = false;
   mouseFire = mouseAim = false;
   touchControls.reset();
@@ -1744,31 +1777,61 @@ function showHitmarker(kind) {
   hitmarkerLife = hitmarkerMaxLife;
 }
 
+const shotEnd = new THREE.Vector3();
+
 function fireShot({ triggerShotCount = 0 } = {}) {
-  const intro = activeWeaponSlot.definition.initialShotCount > 0 && triggerShotCount === 1;
+  const def = activeWeaponSlot.definition;
+  const intro = def.initialShotCount > 0 && triggerShotCount === 1;
   if (!viewmodel.fire({ intro })) return;
   if (playerHealth?.protectionTimer > 0) playerHealth.protectionTimer = 0;
-  const hit = weaponEffects.fire(camera, collisionRoot, viewmodel.muzzlePosition(), {
-    targets: enemies?.hitTargets ?? [],
-    weapon: activeWeaponId,
-  });
-  const damaged = enemies?.handlePlayerHit(hit, activeWeaponSlot.definition.damage);
-  if (damaged) {
-    showHitmarker(damaged.killed ? 'kill' : damaged.region === 'head' ? 'head' : 'torso');
-    weaponEffects.playHitmarker(damaged);
+  const spread = def.spread.hip + (def.spread.ads - def.spread.hip) * viewmodel.aimBlend;
+  const muzzle = viewmodel.muzzlePosition();
+  let marker = null;
+  let firstHitId = null;
+  for (let i = 0; i < def.pellets; i += 1) {
+    const hit = weaponEffects.fire(camera, collisionRoot, muzzle, {
+      targets: combatants.hitTargets(),
+      weapon: def.audio.shot,
+      spread,
+      silent: i > 0,
+    });
+    if (i === 0) {
+      if (hit) shotEnd.copy(hit.point);
+      else shotEnd.copy(camera.getWorldDirection(shotEnd)).multiplyScalar(weaponEffects.maxDistance).add(camera.position);
+    }
+    const resolved = combatants.resolveHit(hit);
+    if (!resolved) continue;
+    const amount = damageFor(def, { distance: hit.distance, region: resolved.region });
+    combatants.applyDamage(resolved.id, amount, {
+      attackerId: 'player', weaponId: def.id, cause: 'bullet', region: resolved.region,
+    });
+    const killed = Boolean(combatants.get(resolved.id)?.dead());
+    if (!marker || (killed && !marker.killed) || (!marker.killed && resolved.region === 'head')) {
+      marker = { killed, region: resolved.region };
+    }
+    if (i === 0) firstHitId = resolved.id;
   }
-  enemies?.alert(player.position, 1500, player.position);
+  if (marker) {
+    showHitmarker(marker.killed ? 'kill' : marker.region === 'head' ? 'head' : 'torso');
+    weaponEffects.playHitmarker(marker);
+  }
+  bus.emit(EVENTS.SHOT, {
+    shooterId: 'player', weaponId: def.id, origin: vectorArray(camera.position), end: vectorArray(shotEnd),
+    hitId: firstHitId,
+  });
+  enemies?.alert(player.position, def.alertRadius, player.position);
 
   // Move the actual aim slightly as well as playing the authored weapon kick,
   // so a held burst climbs instead of keeping every ray perfectly stacked.
   yawPitch.setFromQuaternion(camera.quaternion);
   const adsScale = 1 - viewmodel.aimBlend * 0.48;
+  const [pitchMin, pitchMax] = def.recoil.pitch;
   yawPitch.x = THREE.MathUtils.clamp(
-    yawPitch.x + (0.0065 + Math.random() * 0.004) * adsScale,
+    yawPitch.x + (pitchMin + Math.random() * (pitchMax - pitchMin)) * adsScale,
     -Math.PI / 2,
     Math.PI / 2,
   );
-  yawPitch.y += (Math.random() - 0.5) * 0.0035 * adsScale;
+  yawPitch.y += (Math.random() - 0.5) * def.recoil.yaw * adsScale;
   camera.quaternion.setFromEuler(yawPitch);
 }
 
@@ -1791,6 +1854,7 @@ function setDebugVisibility() {
 const debugRound = (value) => Number.isFinite(value)
   ? Math.round(value * 1000) / 1000
   : null;
+const vectorArray = (vector) => [debugRound(vector.x), debugRound(vector.y), debugRound(vector.z)];
 const debugVector = (vector) => vector
   ? [debugRound(vector.x), debugRound(vector.y), debugRound(vector.z)]
   : null;
@@ -1840,6 +1904,7 @@ function getDebugState() {
       forward: debugVector(forward),
       grounded: player.isGrounded,
       crouched: player.crouched,
+      sliding: Boolean(player.sliding),
       enabled: player.enabled,
       health: debugRound(playerHealth?.health ?? 0),
       maxHealth: debugRound(playerHealth?.maxHealth ?? 0),
@@ -1850,6 +1915,9 @@ function getDebugState() {
     weapon: {
       id: activeWeaponId,
       name: activeWeaponSlot.definition.name,
+      class: activeWeaponSlot.definition.class,
+      fireMode: activeWeaponSlot.definition.fireMode,
+      loadout: { ...loadout },
       ready: viewmodel.ready,
       availableWeapons: [...weaponSlots.values()]
         .filter((slot) => slot.viewmodel.ready)
@@ -1926,7 +1994,10 @@ function getDebugState() {
     menu: frontend.getState(),
     match: match.getState(),
     medals: medals?.getState() ?? null,
-    hud: hud.textContent,
+    config: { mapId: config.mapId, modeId: config.modeId, room: config.room, online: Boolean(net.online) },
+    combatants: combatants.getState(),
+    hud: { text: hud.textContent, ...(hudArt?.getState() ?? { contacts: 0, revealed: false, friendly: 0 }) },
+    systems: Object.fromEntries(systems.map((system) => [system.name, system.getState()])),
   };
 }
 
@@ -1987,8 +2058,20 @@ function createDebugApi() {
     damagePlayer(amount) {
       if (!playerHealth) return 0;
       playerHealth.protectionTimer = 0;
-      return playerHealth.takeDamage(amount, { type: 'debug' });
+      return combatants.applyDamage('player', amount, { attackerId: null, weaponId: 'debug', cause: 'environment' });
     },
+    // Kill any combatant through the real damage path (events, funnel, medals).
+    killCombatant(id, { attackerId = 'player', weaponId = 'debug', cause = 'bullet', region = 'torso' } = {}) {
+      const victim = combatants.get(id);
+      if (!victim || victim.dead()) return { killed: false, event: null };
+      if (id === 'player' && playerHealth) playerHealth.protectionTimer = 0;
+      const before = lastKill;
+      combatants.applyDamage(id, 1e6, { attackerId, weaponId, cause, region });
+      const killed = Boolean(victim.dead());
+      return { killed, event: killed && lastKill !== before ? lastKill : null };
+    },
+    setLoadout: (value) => setLoadout(value),
+    recentEvents: () => bus.history(),
     setWeaponAmmo(magazine, reserveAmmo) {
       weapon.magazine = THREE.MathUtils.clamp(Math.trunc(Number(magazine) || 0), 0, weapon.magazineSize);
       weapon.reserveAmmo = Math.max(0, Math.trunc(Number(reserveAmmo) || 0));
@@ -2091,23 +2174,26 @@ document.addEventListener('keydown', (event) => {
     suspendPlay();
     return;
   }
-  if (event.code === 'Enter' && match.phase === 'ended') {
+  if (event.code === 'Enter' && match.phase === 'ended' && !net.online) {
     restartMatch();
     return;
   }
   // Any key but Esc starts or resumes from the shell — Esc is what released
   // the pointer lock to get here, and the browser owns it for a moment after.
   if (frontend.visible) {
-    if (frontend.screen === 'class') {
+    if (frontend.screen === 'setup') {
+      if (event.code === 'Escape' || event.code === 'Backspace') frontend.closeSetup();
+    } else if (frontend.screen === 'class') {
       if (event.code === 'Escape' || event.code === 'Backspace') frontend.closeClass();
       if (event.code === 'Enter') frontend.confirmClass();
     } else if (event.code !== 'Escape') frontend.play();
     return;
   }
   if (event.code === 'KeyR' && locked) reloadWeapon();
-  if (event.code === 'Digit1' && locked) selectWeapon('m27');
-  if (event.code === 'Digit2' && locked) selectWeapon('an94');
-  if (event.code === 'KeyB' && locked) {
+  if (event.code === 'Digit1' && locked && canControlPlayer()) selectWeapon(loadout.primary);
+  if (event.code === 'Digit2' && locked && canControlPlayer() && loadout.secondary) selectWeapon(loadout.secondary);
+  if (canControlPlayer(true)) for (const system of systems) if (system.onKey(event.code)) break;
+  if (event.code === 'KeyB' && locked && !net.online) {
     if (playerHealth) playerHealth.respawn();
     else player?.respawn();
   }
@@ -2139,10 +2225,36 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) suspe
 
 async function start() {
   try {
+    // Config is boot-time: the net system may pick the map (a joined room's),
+    // otherwise the config does. Both calls resolve at once offline.
+    const online = await Promise.race([
+      Promise.resolve(net.connect(config)).catch(() => false),
+      new Promise((resolve) => setTimeout(resolve, 5000, false)),
+    ]);
+    map = await loadMap(net.roomMapId ?? config.mapId);
+    const botCount = online ? 0 : mode.botCount;
+    scene.background = new THREE.Color(map.background ?? DEFAULT_BACKGROUND);
+    if (map.background !== null) scene.fog.color.setHex(map.background);
+    document.getElementById('fe-map-card').src = map.card ?? 'ui/menu_mp_map_select_hijacked_final.png';
+    document.getElementById('fe-map-card').alt = map.name;
+    document.getElementById('fe-map-caption').textContent = `mp_${map.id}`;
+    hudArt = new Hud({
+      minimap: document.getElementById('hud-minimap'),
+      compass: document.getElementById('hud-compass'),
+      ammoRow: document.getElementById('hud-ammo-row'),
+      weaponName: document.getElementById('hud-weapon-name'),
+      damage: damageOverlay,
+      map,
+    });
+    listMaps().then((maps) => {
+      setupMaps.replaceChildren(...maps.map((entry) => buildSetupCard('mapId', entry.id, entry.name, `mp_${entry.id}`, entry.card)));
+      frontend.render();
+    });
     // Started here so the sky and probes still transfer alongside the map.
     loadEnvironment();
+    loadGradePass(map.lighting.lut);
     const navPromise = loadNavigation({
-      source: 'hijacked.navmesh.bin',
+      source: map.navmesh,
       maxAgents: 32,
       debug: false,
       debugDrawer: {},
@@ -2155,26 +2267,27 @@ async function start() {
     const viewmodelPromise = loadWeaponSlot(activeWeaponSlot)
       .finally(() => frontend.stage('viewmodel'));
     const [renderGltf, loadedCollisionWorld, hints, ladders, medalDefs] = await Promise.all([
-      loadGltf('hijacked_optimized.glb', 'map').then((gltf) => {
+      loadGltf(map.render, 'map').then((gltf) => {
         // KTX2 texture decoding is complete when GLTFLoader resolves.
         frontend.stage('textures');
         return gltf;
       }),
-      loadCollisionWorld({ onProgress: (event) => progress('collision', event) })
+      loadCollisionWorld({ metadataUrl: map.collision, onProgress: (event) => progress('collision', event) })
         .finally(() => frontend.stage('collision')),
-      fetch('hijacked_nav_hints.json').then((response) => {
+      // A map that ships no nav hints gets them synthesised from its spawns.
+      map.hints ? fetch(map.hints).then((response) => {
         if (!response.ok) throw new Error(`nav hints HTTP ${response.status}`);
         return response.json();
-      }),
+      }) : Promise.resolve(synthesiseHints(map)),
       // Baked by `npm run bake:ladders`; the map export carries no ladder
       // surface flags, so climbing needs these volumes.
-      fetch('hijacked_ladders.json').then((response) => {
+      map.ladders ? fetch(map.ladders).then((response) => {
         if (!response.ok) throw new Error(`ladders HTTP ${response.status}`);
         return response.json();
       }).catch((error) => {
         console.warn('Ladders unavailable:', error);
         return null;
-      }),
+      }) : Promise.resolve(null),
       // Missing medal data must never block startup; an empty table leaves the
       // tracker inert while retaining the rest of the deferred loading path.
       fetch('ui/medals/medals.json').then((response) => {
@@ -2205,19 +2318,16 @@ async function start() {
       sprintSpeed: 450,
       jumpHeight: 48,
       maxSlopeAngle: 45,
-      fallResetY: -700,
+      fallResetY: map.fallResetY,
       ladders,
     });
     playerHealth = new PlayerHealth({
-      maxHealth: 100,
-      respawnDelay: 1.5,
-      spawnProtection: 3,
-      regenDelay: 4,
-      regenPerSecond: 25,
+      ...PLAYER_RULES,
       onDeath: ({ source }) => {
         clearKeys();
         deathSource = source;
-        match.recordKill(combatantId(source), 'player');
+        // Online, kills arrive from the server through ctx.recordKillEvent.
+        if (!net.online) reportKill('player', combatantId(source));
         medals?.onDeath();
         player.setEnabled(false);
         weapon.setTrigger(false);
@@ -2228,6 +2338,15 @@ async function start() {
       onRespawn: () => {
         resetPlayerLife();
       },
+    });
+
+    combatants.add({
+      id: 'player', name: 'YOU', kind: 'player', team: mode.teams ? 'allies' : null, actor: player,
+      position: () => player.position,
+      feet: () => player.feetPosition,
+      dead: () => Boolean(playerHealth.dead),
+      hitboxes: () => [],
+      applyDamage: (amount, info) => playerHealth.takeDamage(amount, actorOf(info.attackerId) ?? { type: info.cause }),
     });
 
     navigation = await navPromise;
@@ -2244,14 +2363,18 @@ async function start() {
           playerHealth,
           weaponEffects,
           hints,
-          count: 6,
-          onDeath: (victim, source) => {
-            match.recordKill(combatantId(source), `bot-${victim.index}`);
-            // Bot-on-bot kills stay out of the human player's medal chain.
-            if (medals && combatantId(source) === 'player') {
-              for (const def of medals.onKill()) showMedalPopup(def);
-            }
+          count: botCount,
+          isHostile: (a, b) => combatants.hostile(combatants.idOf(a), combatants.idOf(b)),
+          applyDamage: (target, amount, shooter) => {
+            const victimId = combatants.idOf(target);
+            return victimId ? combatants.applyDamage(victimId, amount, {
+              attackerId: combatants.idOf(shooter), weaponId: 'bot', cause: 'bullet', region: 'torso',
+            }) : 0;
           },
+          onShot: ({ shooter }) => hudArt.markFire(combatants.idOf(shooter)),
+          extraThreats: () => net.threats(),
+          spawnClasses: mode.spawnClasses,
+          onDeath: (victim, source) => reportKill(`bot-${victim.index}`, combatantId(source)),
         })).load({ onProgress: (label, event) => progress(label, event) })
       : Promise.resolve()
     ).finally(() => frontend.stage('enemy'));
@@ -2261,7 +2384,18 @@ async function start() {
 
     const botNames = ['ADMIRAL', 'CORSAIR', 'DEADEYE', 'MARINER', 'ROGUE', 'VIPER'];
     for (const enemy of enemies?.enemies ?? []) {
-      match.register(`bot-${enemy.index}`, botNames[enemy.index] ?? `BOT ${enemy.index + 1}`);
+      const id = `bot-${enemy.index}`;
+      const name = botNames[enemy.index] ?? `BOT ${enemy.index + 1}`;
+      const team = mode.teamFor(enemy.index);
+      combatants.add({
+        id, name, kind: 'bot', team, actor: enemy,
+        position: () => enemy.root.position,
+        feet: () => enemy.root.position,
+        dead: () => enemy.dead,
+        hitboxes: () => enemy.hitboxes,
+        applyDamage: (amount, info) => enemy.takeDamage(amount, null, actorOf(info.attackerId)),
+      });
+      match.register(id, name, { team });
     }
     renderMatchUi();
 
@@ -2320,6 +2454,33 @@ async function start() {
     // frontend covers the canvas, so it does not need a full scene every frame.
     renderFrame();
 
+    const ctx = {
+      THREE, scene, camera, renderer, config, map, mode, bus, combatants, match, player, playerHealth, enemies,
+      navigation, collisionWorld, weaponEffects, hud: hudArt,
+      overlay: document.getElementById('system-layer'),
+      canControl: () => canControlPlayer(),
+      captureInput,
+      weapons: {
+        activeId: () => activeWeaponId,
+        definition: (id) => getWeapon(id),
+        load: loadWeapons,
+        setLoadout,
+        loadout: () => ({ ...loadout }),
+      },
+      recordKillEvent,
+      showHitmarker,
+      notify,
+      showMedal: showMedalPopup,
+    };
+    const debugApi = createDebugApi();
+    for (const system of systems) {
+      system.init(ctx);
+      for (const [key, value] of Object.entries(system.debug ?? {})) {
+        if (key in debugApi) console.error(`[systems] duplicate debug key "${key}" from ${system.name}`);
+        else debugApi[key] = value;
+      }
+    }
+
     // Small read/debug surface for automated smoke tests and map tooling.
     globalThis.hijacked = {
       scene, camera, renderer, player, navigation, collisionRoot, collisionWorld, hints, viewmodel,
@@ -2330,7 +2491,7 @@ async function start() {
         get gradeMaterial() { return gradeMaterial; },
         get gradeTarget() { return gradeTarget; },
       },
-      debug: createDebugApi(),
+      debug: debugApi,
     };
 
     startupMilliseconds = debugRound(performance.now() - bootStartedAt);
@@ -2339,7 +2500,7 @@ async function start() {
     frontend.setReady([
       'WASD move · Shift sprint · Space jump · C/Ctrl crouch',
       'Left mouse fire · Right mouse aim · R reload · B respawn',
-      '1 M27 · 2 AN-94 · Create a class from the menu',
+      `1 ${getWeapon(loadout.primary)?.name ?? ''}${loadout.secondary ? ` · 2 ${getWeapon(loadout.secondary)?.name}` : ''} · Create a class from the menu`,
       'K cycle camo · N navmesh · V collision · P path · Esc pause',
       navigation ? '' : 'Navigation failed to load; collision and walking are still available.',
     ]);
@@ -2351,14 +2512,27 @@ async function start() {
   }
 }
 
+function hudContacts() {
+  const revealed = Boolean(killstreaks.radarActive);
+  return combatants.all().filter((entry) => entry.id !== 'player').map((entry) => {
+    const point = entry.position();
+    return {
+      id: entry.id, x: point.x, z: point.z, dead: Boolean(entry.dead()),
+      friendly: !combatants.hostile('player', entry.id), revealed,
+    };
+  });
+}
+
 function tick() {
   requestAnimationFrame(tick);
   const frameWorkStartedAt = performance.now();
   if (graphics.observeFrame(frameWorkStartedAt, ready && canControlPlayer() && !document.hidden)) resizeGraphicsBuffer();
   const dt = Math.min(clock.getDelta(), 0.1);
+  const replaying = killcam.isPlaying();
   const simulationActive = locked && !frontend.visible && !automationPaused &&
     !(touchControls.mode && scoreboardHeld) && match.phase === 'playing';
   const controlsActive = canControlPlayer();
+  const simulate = simulationActive && !replaying;
   touchControls.setEnabled(controlsActive, ready && locked && !frontend.visible && !scoreboardHeld && match.phase === 'playing');
   const touch = touchControls.input.read();
   const movement = {
@@ -2370,13 +2544,23 @@ function tick() {
   };
   weapon.setTrigger(controlsActive && (mouseFire || touch.fire));
   viewmodel.setAiming(controlsActive && (mouseAim || touch.aim));
-  if (player && simulationActive) {
+  if (player && simulate) {
     player.update(dt, controlsActive ? movement : {});
   }
-  if (simulationActive) navigation?.update(1 / 60, dt, 5);
-  enemies?.update(dt, { active: simulationActive });
-  playerHealth?.update(simulationActive ? dt : 0);
-  if (simulationActive) match.update(dt);
+  if (simulate) navigation?.update(1 / 60, dt, 5);
+  if (!replaying) {
+    enemies?.update(dt, { active: simulationActive });
+    playerHealth?.update(simulationActive ? dt : 0);
+    if (simulationActive) match.update(dt);
+  }
+  if (ready) {
+    const frame = { simulationActive, controlsActive };
+    for (const system of systems) system.update(dt, frame);
+  }
+  if (noticeLife > 0) {
+    noticeLife -= dt;
+    if (noticeLife <= 0) systemNotice.classList.remove('show');
+  }
   weaponEffects.update(dt);
   // Panned enemy fire is only meaningful while the listener tracks the camera.
   if (simulationActive) weaponEffects.updateListener(camera);
@@ -2413,25 +2597,12 @@ function tick() {
       deathCard.style.display = 'block';
     }
 
-    // A minimap ping lights when an enemy's shot counter ticks; carrying the
-    // last seen count keeps respawn resets from flashing a stale ping.
-    for (const enemy of enemies?.enemies ?? []) {
-      const seen = lastEnemyShots.get(enemy.index) ?? 0;
-      if (enemy.shotsFired > seen) hudArt.markEnemyFire(enemy.index);
-      lastEnemyShots.set(enemy.index, enemy.shotsFired);
-    }
-
     yawPitch.setFromQuaternion(camera.quaternion);
     hudArt.update({
       x: p.x,
       z: p.z,
       yaw: yawPitch.y,
-      enemies: enemies?.enemies.map((enemy) => ({
-        index: enemy.index,
-        x: enemy.root.position.x,
-        z: enemy.root.position.z,
-        dead: enemy.dead,
-      })) ?? [],
+      contacts: hudContacts(),
       weapon: {
         name: activeWeaponSlot.definition.name,
         magazine: weapon.magazine,
@@ -2461,6 +2632,9 @@ function tick() {
     }
   }
   if (match.phase === 'ended' && !matchEndedHandled) {
+    bus.emit(EVENTS.MATCH, {
+      phase: 'ended', winnerId: match.getState().winnerId ?? null, winnerTeam: match.getState().winnerTeam ?? null,
+    });
     clearKeys();
     matchEndedHandled = true;
     player?.setEnabled(false);
@@ -2491,9 +2665,13 @@ function tick() {
   // The stride bob lives on the camera only for the draw; gameplay reads the
   // steady camera before and after.
   if (!frontend.visible) {
-    viewBob.apply(camera);
-    renderFrame();
-    viewBob.restore(camera);
+    if (replaying && killcam.camera) {
+      renderFrame(killcam.camera, false);
+    } else {
+      viewBob.apply(camera);
+      renderFrame();
+      viewBob.restore(camera);
+    }
   }
   if (ready && performance.now() >= frameWorkWarmupUntil) {
     frameWorkSamples[frameWorkSampleIndex] = performance.now() - frameWorkStartedAt;
@@ -2504,22 +2682,22 @@ function tick() {
 
 // The world and weapon share the HDR scene target. Grade once, then use FXAA
 // only when the device cannot multisample that target.
-function renderFrame() {
+function renderFrame(cam = camera, drawViewmodel = true) {
   if (gradeMaterial && gradeTarget) {
     // Kept in sync here because the vision set's exposure is applied
     // asynchronously and may land after this pass was built.
     gradeMaterial.uniforms.exposure.value = renderer.toneMappingExposure;
     renderer.setRenderTarget(gradeTarget);
     renderer.clear();
-    renderer.render(scene, camera);
-    viewmodel.render(renderer);
+    renderer.render(scene, cam);
+    if (drawViewmodel) viewmodel.render(renderer);
     gradeMaterial.uniforms.tDiffuse.value = gradeTarget.texture;
     graphicsRenderer.render(gradeScene, gradeCamera);
     return;
   }
   renderer.clear();
-  renderer.render(scene, camera);
-  viewmodel.render(renderer);
+  renderer.render(scene, cam);
+  if (drawViewmodel) viewmodel.render(renderer);
 }
 
 // Booting is deferred until something suggests a real visitor is present.
