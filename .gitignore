@@ -64,3 +64,6 @@
 /export/web/_collision_test.*
 
 !/FROYDINGER.md
+!/server/
+!/server/**
+/server/node_modules/
