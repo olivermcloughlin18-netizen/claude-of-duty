@@ -26,6 +26,11 @@ const SPRINT = Object.freeze({
   lean: 0.01,
 });
 
+// Slide: the controller publishes a smoothed 0..1 `camera.userData.slideBlend`.
+// The render dips the eye, tips the view into the slide and pushes the FOV out.
+// Like the bob it is applied around the draw only.
+const SLIDE = Object.freeze({ dip: 9, pitch: -0.05, roll: 0.045, fov: 11 });
+
 // Ground contact drops for a few physics steps on every stair riser and lip,
 // so the stride keeps going for this long after the last contact instead of
 // stuttering on terrain.
@@ -46,8 +51,10 @@ export class ViewBob {
     this._savedPosition = new THREE.Vector3();
     this._savedQuaternion = new THREE.Quaternion();
     this._tiltQuaternion = new THREE.Quaternion();
+    this._slideEuler = new THREE.Euler(0, 0, 0, 'YXZ');
     this._worldOffset = new THREE.Vector3();
     this._applied = false;
+    this._savedFov = null;
   }
 
   update(dt, state = {}) {
@@ -90,8 +97,19 @@ export class ViewBob {
     this._savedPosition.copy(camera.position);
     this._savedQuaternion.copy(camera.quaternion);
     this._applied = true;
-    camera.position.add(this._worldOffset.copy(this.offset).applyQuaternion(camera.quaternion));
+    const slide = camera.userData?.slideBlend ?? 0;
+    // The stride is replaced by the slide as it takes over.
+    const stride = 1 - slide;
+    camera.position.add(this._worldOffset.copy(this.offset).multiplyScalar(stride).applyQuaternion(camera.quaternion));
     this._tiltQuaternion.setFromEuler(this.tilt);
+    if (slide > 0) {
+      this._slideEuler.set(this.tilt.x * stride + SLIDE.pitch * slide, 0, this.tilt.z * stride + SLIDE.roll * slide);
+      this._tiltQuaternion.setFromEuler(this._slideEuler);
+      camera.position.y -= SLIDE.dip * slide;
+      this._savedFov = camera.fov;
+      camera.fov += SLIDE.fov * slide;
+      camera.updateProjectionMatrix();
+    }
     camera.quaternion.multiply(this._tiltQuaternion);
   }
 
@@ -99,6 +117,11 @@ export class ViewBob {
     if (!this._applied) return;
     camera.position.copy(this._savedPosition);
     camera.quaternion.copy(this._savedQuaternion);
+    if (this._savedFov !== null) {
+      camera.fov = this._savedFov;
+      camera.updateProjectionMatrix();
+      this._savedFov = null;
+    }
     this._applied = false;
   }
 }
