@@ -9,7 +9,7 @@ import { runGraphicsTest } from './graphics-game.mjs';
 const root = process.cwd();
 const webRoot = path.resolve(root, 'export', 'web');
 const artifactRoot = path.resolve(root, process.env.AI_GAME_ARTIFACT_DIR ??
-  (process.argv[2] === 'mobile-test' ? 'artifacts/ai-mobile' : process.argv[2] === 'graphics-test' ? 'artifacts/ai-graphics' : 'artifacts/ai-game'));
+  (process.argv[2] === 'scenario' ? `artifacts/ai-${process.argv[3]}` : process.argv[2] === 'mobile-test' ? 'artifacts/ai-mobile' : process.argv[2] === 'graphics-test' ? 'artifacts/ai-graphics' : 'artifacts/ai-game'));
 const command = process.argv[2] ?? 'help';
 const touchContext = ['mobile-test', 'graphics-test'].includes(command) || process.env.AI_GAME_MOBILE === '1';
 const viewport = touchContext ? { width: 844, height: 390 } : { width: 1280, height: 720 };
@@ -51,6 +51,7 @@ Usage:
   npm run ai:game -- mobile-test
   npm run ai:game -- graphics-test [fallback]
   npm run ai:game -- record [seconds] [weapon]
+  npm run ai:game -- scenario <name>      (runs .tools/scenarios/<name>.mjs)
 
 Environment:
   AI_GAME_HEADED=1             Show the controlled browser window
@@ -64,6 +65,8 @@ Environment:
 function findBrowser() {
   const candidates = [
     process.env.BROWSER_PATH,
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
     'C:/Program Files/Google/Chrome/Application/chrome.exe',
     'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
     'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
@@ -135,9 +138,15 @@ async function run() {
     process.stdout.write(usage());
     return;
   }
-  if (!['state', 'screenshot', 'test', 'enemy-test', 'life-test', 'mobile-test', 'graphics-test', 'record'].includes(command)) {
+  if (!['state', 'screenshot', 'test', 'enemy-test', 'life-test', 'mobile-test', 'graphics-test', 'record', 'scenario'].includes(command)) {
     throw new Error(`Unknown command: ${command}\n\n${usage()}`);
   }
+
+  // A scenario is .tools/scenarios/<name>.mjs: `query` (extra URL params) and
+  // `async run({page, openGame, screenshot, writeJson, artifactRoot})` -> {checks, probe}.
+  const scenario = command === 'scenario'
+    ? await import(`./scenarios/${path.basename(String(commandArgument))}.mjs`)
+    : null;
 
   const browserPath = findBrowser();
   if (!browserPath) throw new Error('Chrome or Edge was not found. Set BROWSER_PATH to its executable.');
@@ -146,6 +155,11 @@ async function run() {
   const ownedServer = process.env.BROWSER_TEST_URL ? null : await staticServer();
   const baseUrl = process.env.BROWSER_TEST_URL ?? ownedServer.url;
   const gameUrl = command === 'mobile-test' ? baseUrl : autostartUrl(baseUrl);
+  const scenarioUrl = (extra = scenario?.query ?? '') => {
+    const parsed = new URL(gameUrl);
+    for (const [key, value] of new URLSearchParams(extra)) parsed.searchParams.set(key, value);
+    return String(parsed);
+  };
   const consoleMessages = [];
   const errors = [];
   const recordSeconds = Math.max(1, Math.min(60, Number(commandArgument) || 5));
@@ -216,7 +230,7 @@ async function run() {
     if (command === 'mobile-test') {
       startupChecks = await runMobileStartup(page, artifactRoot, gameUrl);
     } else {
-      const response = await page.goto(gameUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      const response = await page.goto(scenario ? scenarioUrl() : gameUrl, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       if (!response?.ok()) throw new Error(`Game returned HTTP ${response?.status() ?? 'unknown'}`);
     }
     await page.waitForFunction(
@@ -249,6 +263,17 @@ async function run() {
       inputProbe = await runMobileTest(page, artifactRoot);
     } else if (command === 'graphics-test') {
       inputProbe = await runGraphicsTest(page, artifactRoot, commandArgument === 'fallback');
+    } else if (command === 'scenario') {
+      inputProbe = await scenario.run({
+        page,
+        artifactRoot,
+        writeJson,
+        screenshot: (name) => page.screenshot({ path: path.join(artifactRoot, name.endsWith('.png') ? name : `${name}.png`) }),
+        openGame: async (extra = '') => {
+          await page.goto(scenarioUrl(extra), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+          await page.waitForFunction(() => globalThis.hijacked?.debug?.getState().ready === true, null, { timeout: 180_000 });
+        },
+      });
     } else if (command === 'screenshot' && commandArgument) {
       const options = await page.evaluate(() => globalThis.hijacked.debug.getState().weapon);
       if (options.availableWeapons.includes(commandArgument)) {
@@ -369,7 +394,10 @@ async function run() {
     await writeJson('state.json', state);
     await page.screenshot({ path: path.join(artifactRoot, 'screenshot.png') });
 
-    const checks = ['mobile-test', 'graphics-test'].includes(command) ? {
+    const checks = command === 'scenario' ? {
+      ...inputProbe.checks,
+      noBrowserErrors: errors.length === 0,
+    } : ['mobile-test', 'graphics-test'].includes(command) ? {
       ...startupChecks,
       ...inputProbe.checks,
       noBrowserErrors: errors.length === 0,
@@ -411,7 +439,7 @@ async function run() {
       passed: Object.values(checks).every(Boolean),
       checks,
       errors,
-      ...(inputProbe ? { inputProbe } : {}),
+      ...(inputProbe ? { inputProbe: command === 'scenario' ? inputProbe.probe : inputProbe } : {}),
       artifacts: artifactRoot,
       ...(command === 'record' ? { seconds: recordSeconds } : {}),
     };

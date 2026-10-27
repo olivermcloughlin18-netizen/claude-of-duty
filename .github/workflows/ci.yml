@@ -32,3 +32,6 @@ jobs:
 
       - name: Run focused unit tests
         run: npm run test:unit
+
+      - name: Run server tests
+        run: npm ci --prefix server && npm test --prefix server
