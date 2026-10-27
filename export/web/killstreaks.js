@@ -81,6 +81,7 @@ body.locked #ks-column { opacity: 1; }
 .ks-slot .ks-text small { font-size: 10px; opacity: .75; letter-spacing: .1em; }
 #ks-progress { width: 168px; height: 4px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.25); }
 #ks-progress i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); background: linear-gradient(90deg, #7ff3ff, #fff); transition: transform .2s; }
+@media (pointer: coarse) { #ks-column { right: auto; left: 14px; bottom: auto; top: 134px; flex-direction: row; align-items: center; } .ks-slot { width: 46px; padding: 0; justify-content: center; } .ks-slot:not(.ready):not(.active) { display: none; } .ks-text, .ks-key, #ks-progress { display: none; } #ks-uav-label { left: 136px; } }
 @keyframes ks-pulse { 50% { transform: translateX(-4px); filter: brightness(1.25); } }
 #ks-sweep { position: absolute; inset: -40%; pointer-events: none; background: conic-gradient(from 0deg, rgba(90,255,255,0) 0deg, rgba(90,255,255,.5) 38deg, rgba(90,255,255,0) 40deg); animation: ks-spin 1.6s linear infinite; mix-blend-mode: screen; }
 @keyframes ks-spin { to { transform: rotate(360deg); } }
@@ -182,6 +183,7 @@ export const system = (() => {
 
   function refreshHud() {
     const set = (key, apply, value) => { if (ui.last[key] !== value) { ui.last[key] = value; apply(value); } };
+    set('touch', (v) => { const b = document.querySelector('[data-touch="streak"]'); if (b) b.hidden = !v; }, Boolean(tracker.latest()));
     const activeSecs = { uav: state.uav };
     for (const id of ORDER) {
       const slot = ui.slots[id];
