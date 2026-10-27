@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createServer } from '../server/server.js';
 import { buildTable } from '../.tools/sync_server_weapons.mjs';
-import { createNetPlay, sampleAt, addClaim } from '../export/web/net-play.js';
+import { createNetPlay, sampleAt, addClaim, claimCap } from '../export/web/net-play.js';
 import { createEventBus } from '../export/web/game-events.js';
 import { Combatants } from '../export/web/combatants.js';
 import { FreeForAllMatch } from '../export/web/free-for-all-match.js';
 import { PlayerHealth } from '../export/web/player-health.js';
 import { MAP_IDS } from '../export/web/maps.js';
+import { getWeapon } from '../export/web/weapons.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const until = async (fn, ms = 3000) => {
@@ -41,11 +42,19 @@ test('sampleAt interpolates position and takes the short way round for yaw', () 
   assert.equal(sampleAt([], 5), null);
 });
 
-test('addClaim sums pellets and flags any head', () => {
+test('addClaim sums pellets, flags any head and splits a second bullet that exceeds one shot', () => {
   const claims = new Map();
-  addClaim(claims, 'x', { amount: 40, region: 'torso', weaponId: 's' });
-  addClaim(claims, 'x', { amount: 80, region: 'head', weaponId: 's' });
-  assert.deepEqual(claims.get('x'), { damage: 120, headshot: true, weaponId: 's' });
+  const cap = (head) => 33 * 8 * (head ? 2 : 1); // 8-pellet shotgun of 33
+  addClaim(claims, 'x', { amount: 33, region: 'torso', weaponId: 's' }, cap);
+  addClaim(claims, 'x', { amount: 66, region: 'head', weaponId: 's' }, cap);
+  assert.deepEqual(claims.get('x'), [{ damage: 99, headshot: true, weaponId: 's' }]);
+  const rifle = (head) => 33 * (head ? 2 : 1);
+  const two = new Map();
+  addClaim(two, 'y', { amount: 33, region: 'torso', weaponId: 'm27' }, rifle);
+  addClaim(two, 'y', { amount: 33, region: 'torso', weaponId: 'm27' }, rifle); // second bullet, same frame
+  assert.equal(two.get('y').length, 2);
+  assert.equal(claimCap({ damage: 33, pellets: 8 }, true), 528);
+  assert.equal(claimCap(null, false), Infinity);
 });
 
 test('unreachable server, no room, or no url means offline (false) with a notice', async () => {
@@ -88,7 +97,7 @@ function fakeCtx(name, notes = [], feet = [0, 0, 0]) {
         setPose() {}, setVisible() {}, dispose() { this.disposed = true; },
       }),
     },
-    weapons: { activeId: () => 'm27' },
+    weapons: { activeId: () => 'm27', definition: (id) => getWeapon(id) },
     weaponEffects: { addTracer: (a, b) => shots.push([a, b]), playEnemyShot() {} },
     hud: { markFire() {} },
     overlay: { append() {} },
@@ -134,11 +143,13 @@ test('two clients: map echo, puppets, one aggregated claim, server-authoritative
     await until(() => a.getState().phase === 'playing');
 
     const respawnsBefore = cb.respawns.length;
-    // Four pellets of one frame become ONE claim; the headshot doubles the cap, so 2 x 66 = a kill in two frames.
-    const info = { attackerId: 'player', weaponId: 'm27', cause: 'bullet', region: 'head' };
-    assert.equal(ca.combatants.applyDamage(`net-${bId}`, 66, info), 66, 'predicted amount for the hitmarker');
+    // Two bullets landing in the same frame must go out as two paced claims (one aggregate would be bad_damage).
+    const torso = { attackerId: 'player', weaponId: 'm27', cause: 'bullet', region: 'torso' };
+    assert.equal(ca.combatants.applyDamage(`net-${bId}`, 33, torso), 33, 'predicted amount for the hitmarker');
+    ca.combatants.applyDamage(`net-${bId}`, 33, torso);
     await until(() => cb.playerHealth.health === 34);
     assert.equal(a.getState().rejected, 0);
+    const info = { ...torso, region: 'head' };
     await sleep(120);
     ca.combatants.applyDamage(`net-${bId}`, 66, info);
     await until(() => cb.deaths.length === 1);
