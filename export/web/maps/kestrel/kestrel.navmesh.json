@@ -1,0 +1,52 @@
+{
+  "format": "detour-navmesh",
+  "recastNavigationVersion": "0.43.1",
+  "coordinateSystem": "three-y-up",
+  "source": ".work/maps/kestrel/collision.gltf",
+  "geometry": {
+    "vertices": 13440,
+    "triangles": 4480
+  },
+  "bounds": {
+    "min": [
+      -1500,
+      -40,
+      -1050
+    ],
+    "max": [
+      1500,
+      330,
+      1050
+    ]
+  },
+  "config": {
+    "cs": 4,
+    "ch": 2,
+    "walkableSlopeAngle": 45,
+    "walkableHeight": 36,
+    "walkableClimb": 9,
+    "walkableRadius": 4,
+    "maxEdgeLen": 12,
+    "maxSimplificationError": 1.3,
+    "minRegionArea": 8,
+    "mergeRegionArea": 20,
+    "maxVertsPerPoly": 6,
+    "detailSampleDist": 6,
+    "detailSampleMaxError": 1,
+    "buildBvTree": true,
+    "bounds": [
+      [
+        -1500,
+        -40,
+        -1050
+      ],
+      [
+        1500,
+        330,
+        1050
+      ]
+    ]
+  },
+  "offMeshConnections": [],
+  "byteLength": 262272
+}

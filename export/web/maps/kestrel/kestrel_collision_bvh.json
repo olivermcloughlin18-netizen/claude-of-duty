@@ -1,0 +1,43 @@
+{
+  "format": "hijacked-collision-bvh-v1",
+  "threeMeshBvhVersion": "0.9.14",
+  "source": ".work/maps/kestrel/collision.gltf",
+  "binary": "kestrel_collision_bvh.bin",
+  "coordinateSystem": "three-y-up",
+  "vertices": 13440,
+  "triangles": 4480,
+  "bounds": {
+    "min": [
+      -1500,
+      -40,
+      -1050
+    ],
+    "max": [
+      1500,
+      330,
+      1050
+    ]
+  },
+  "buildMilliseconds": 20,
+  "byteLength": 249568,
+  "layout": {
+    "position": {
+      "byteOffset": 0,
+      "byteLength": 161280,
+      "type": "Float32Array",
+      "count": 40320
+    },
+    "index": {
+      "byteOffset": 161280,
+      "byteLength": 53760,
+      "type": "Uint32Array",
+      "count": 13440
+    },
+    "roots": [
+      {
+        "byteOffset": 215040,
+        "byteLength": 34528
+      }
+    ]
+  }
+}

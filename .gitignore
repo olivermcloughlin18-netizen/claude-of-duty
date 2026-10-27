@@ -37,6 +37,9 @@
 !/.tools/bake_probes.mjs
 !/.tools/prune-deploy.sh
 !/.tools/stage_cloudflare.mjs
+!/.tools/build_map_*.mjs
+!/.tools/map_kit.mjs
+!/.tools/bake_map_package.mjs
 !/.tools/perf_probe.mjs
 !/.tools/xanim_to_json.mjs
 !/.tools/extract_t6_sab_audio.mjs

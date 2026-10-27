@@ -312,18 +312,46 @@ export function probeAt(point, dirs, bvh, sky, options = {}) {
 
 // --------------------------------- main -----------------------------------
 
+// Optional CLI for non-Hijacked maps (defaults unchanged):
+//   --collision <gltf> --env <dir with px..nz.png> --out <prefix> --spacing n --rays n --emitters <json>
+function cli(name, fallback) {
+  const i = process.argv.indexOf(`--${name}`);
+  return i > 0 ? process.argv[i + 1] : fallback;
+}
+
+// Point lights the sky-only bake cannot see (neon, interior lamps): added to the
+// SH analytically, shadowed by the same BVH.
+export function addEmitters(out, point, emitters, bvh) {
+  for (const e of emitters) {
+    const dx = e.position[0] - point[0], dy = e.position[1] - point[1], dz = e.position[2] - point[2];
+    const dist = Math.hypot(dx, dy, dz);
+    if (dist < 1 || dist > e.radius * 4) continue;
+    const d = [dx / dist, dy / dist, dz / dist];
+    if (bvh.occluded(point[0], point[1], point[2], d[0], d[1], d[2], dist - 4)) continue;
+    const k = e.intensity / (1 + (dist / e.radius) ** 2);
+    const basis = shBasis(d);
+    for (let b = 0; b < 4; b++) for (let c = 0; c < 3; c++) out[b * 3 + c] += e.color[c] * k * basis[b];
+  }
+  return out;
+}
+
 function run() {
-  const spacing = Number(process.env.PROBE_SPACING || 160);
-  const rays = Number(process.env.PROBE_RAYS || 128);
+  const collisionPath = path.resolve(ROOT, cli('collision', path.join(WEB, 'hijacked_collision.gltf')));
+  const envDir = path.resolve(ROOT, cli('env', path.join(WEB, 'textures', 'env')));
+  const outPrefix = path.resolve(ROOT, cli('out', path.join(WEB, 'hijacked_probes')));
+  const emitters = cli('emitters') ? JSON.parse(fs.readFileSync(path.resolve(ROOT, cli('emitters')), 'utf8')) : [];
+  const ambient = cli('ambient') ? cli('ambient').split(',').map(Number) : null;
+  const spacing = Number(cli('spacing', process.env.PROBE_SPACING || 160));
+  const rays = Number(cli('rays', process.env.PROBE_RAYS || 128));
 
   console.log('loading occluders...');
-  const tris = parseGltfTriangles(path.join(WEB, 'hijacked_collision.gltf'));
+  const tris = parseGltfTriangles(collisionPath);
   console.log(`  ${tris.length / 9} triangles`);
   const bvh = new BVH(tris);
 
   console.log('loading sky...');
   const faces = FACE_ORDER.map((f) =>
-    decodeOwnPng(fs.readFileSync(path.join(WEB, 'textures', 'env', `${f}.png`))));
+    decodeOwnPng(fs.readFileSync(path.join(envDir, `${f}.png`))));
   const sky = makeSkySampler(faces);
 
   const min = [Infinity, Infinity, Infinity];
@@ -350,6 +378,9 @@ function run() {
         const cell = (x * dims[1] + y) * dims[2] + z;
         const point = [origin[0] + x * spacing, origin[1] + y * spacing, origin[2] + z * spacing];
         const sh = probeAt(point, dirs, bvh, sky);
+        if (emitters.length) addEmitters(sh, point, emitters, bvh);
+        // flat ambient term (L0): radiance a integrates to 4*pi*0.282095*a
+        if (ambient) for (let c = 0; c < 3; c++) sh[c] += ambient[c] * 3.5449;
         for (let i = 0; i < 12; i++) data[cell * 12 + i] = sh[i];
         if (++done % 2000 === 0) {
           const rate = done / ((Date.now() - started) / 1000);
@@ -359,8 +390,8 @@ function run() {
     }
   }
 
-  fs.writeFileSync(path.join(WEB, 'hijacked_probes.bin'), Buffer.from(data.buffer));
-  fs.writeFileSync(path.join(WEB, 'hijacked_probes.json'), JSON.stringify({
+  fs.writeFileSync(`${outPrefix}.bin`, Buffer.from(data.buffer));
+  fs.writeFileSync(`${outPrefix}.json`, JSON.stringify({
     origin, spacing, dims,
     coefficients: 4,
     layout: 'x-major, then y, then z; 4 SH coefficients of rgb float32',
