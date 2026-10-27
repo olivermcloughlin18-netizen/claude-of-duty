@@ -381,6 +381,7 @@ class Enemy {
     this.walkTime = Math.random() * Math.PI * 2;
     this.deathBlend = 0;
     this.playerVisible = false;
+    this.detour = null;
     this.spawnPoint = {
       position: spawn.position.clone(),
       authoredPosition: spawn.authoredPosition?.clone() ?? spawn.position.clone(),
@@ -539,10 +540,14 @@ class Enemy {
     const damage = Math.max(0, Number(amount) || 0);
     const applied = Math.min(this.health, damage);
     this.health -= applied;
-    this.currentTarget = source && source !== this ? source : this.manager.player;
-    this.lastSeen.copy(this.manager.targetPosition(this.currentTarget));
-    this.lastSeenTimer = 6;
-    this.engaged = true;
+    const attacker = source && source !== this ? source : this.manager.player;
+    // Team modes: an unattributed hit (air strike) must not make an ally hunt the player.
+    this.currentTarget = this.manager.isHostile(this, attacker) ? attacker : null;
+    if (this.currentTarget) {
+      this.lastSeen.copy(this.manager.targetPosition(this.currentTarget));
+      this.lastSeenTimer = 6;
+      this.engaged = true;
+    }
     this.searchTimer = 0;
     this.suppressionTimer = Math.max(this.suppressionTimer, 1.25);
     this.reactionTimer = Math.min(this.reactionTimer, 0.12);
@@ -577,6 +582,12 @@ class Enemy {
     return this.eyePosition(target);
   }
 
+  /** Walk to `point` instead of patrolling (Kill Confirmed tags); null resumes patrol. */
+  setDetour(point) {
+    if (!point && this.detour && this.patrolTarget === this.detour) this.patrolTarget = null;
+    this.detour = point ?? null;
+  }
+
   choosePatrolTarget() {
     this.patrolTarget = this.manager.findPatrolPoint(this.root.position);
     if (this.patrolTarget) this.agent?.requestMoveTarget(this.patrolTarget);
@@ -595,7 +606,8 @@ class Enemy {
   }
 
   decide() {
-    if (this.manager.targetDead(this.currentTarget)) this.currentTarget = null;
+    if (this.manager.targetDead(this.currentTarget) || (this.currentTarget &&
+        !this.manager.isHostile(this, this.currentTarget))) this.currentTarget = null;
     const alreadyAlerted = this.engaged || this.lastSeenTimer > 0 ||
       ['chase', 'attack', 'reposition', 'search'].includes(this.state);
     const wasVisible = this.playerVisible;
@@ -678,6 +690,13 @@ class Enemy {
     this.currentTarget = null;
     this.searchTarget = null;
     this.state = 'patrol';
+    if (this.detour) {
+      if (this.patrolTarget !== this.detour) {
+        this.patrolTarget = this.detour;
+        this.agent?.requestMoveTarget(this.detour);
+      }
+      return;
+    }
     if (!this.patrolTarget || planarDistance(this.root.position, this.patrolTarget) < 50) {
       this.choosePatrolTarget();
     }
@@ -991,6 +1010,46 @@ export class EnemyManager {
     }
   }
 
+  /**
+   * Team modes: replace the spawn pool with `pool` markers and remember the
+   * per-team start groups `starts = {allies:[marker], axis:[marker]}`.
+   */
+  setTeamSpawns({ pool, starts }) {
+    const project = (markers) => markers.map((marker) => {
+      const authoredPosition = new THREE.Vector3(...marker.position);
+      const result = this.navigation.projectPoint(authoredPosition);
+      if (!result.success || !result.point) return null;
+      return {
+        position: result.point, authoredPosition, yaw: Number(marker.yaw) || 0,
+        classname: marker.classname ?? 'team', markerIndex: Math.max(0, pool.indexOf(marker)),
+      };
+    }).filter(Boolean);
+    this.spawnCandidates = project(pool);
+    this.teamStarts = Object.fromEntries(Object.entries(starts).map(([team, markers]) => [team, project(markers)]));
+  }
+
+  /** Team modes: put every bot on a spread-out start marker of its team. */
+  placeAtStarts(teamOf) {
+    const used = [this.player.feetPosition];
+    const taken = new Set();
+    for (const enemy of this.enemies) {
+      const list = this.teamStarts?.[teamOf(enemy)];
+      if (!list?.length) continue;
+      let best = null;
+      let bestScore = -Infinity;
+      for (const candidate of list) {
+        if (taken.has(candidate)) continue;
+        const score = Math.min(...used.map((point) => planarDistance(candidate.position, point)));
+        if (score > bestScore) { bestScore = score; best = candidate; }
+      }
+      best ??= list[0];
+      taken.add(best);
+      used.push(best.position);
+      enemy.spawnAt(best);
+      enemy.spawnPoint = { ...best, position: best.position.clone(), authoredPosition: best.authoredPosition.clone() };
+    }
+  }
+
   get aliveCount() {
     return this.enemies.reduce((count, enemy) => count + Number(!enemy.dead), 0);
   }
@@ -1117,7 +1176,7 @@ export class EnemyManager {
     let actorHit = null;
     let actorDistance = Infinity;
     for (const candidate of [this.player, ...this.enemies]) {
-      if (candidate === enemy || this.targetDead(candidate)) continue;
+      if (candidate === enemy || this.targetDead(candidate) || !this.isHostile(enemy, candidate)) continue;
       this.targetFeet(candidate, _friendCenter);
       _sphere.center.set(_friendCenter.x, _friendCenter.y + 39, _friendCenter.z);
       _sphere.radius = 19;
@@ -1245,10 +1304,12 @@ export class EnemyManager {
     // Hostile positions are gathered once: bots and the player this actor would
     // fight, plus peers the host knows about (remote players).
     const threats = [];
+    const friends = [];
     for (const other of [this.player, ...this.enemies]) {
       if (other === actor || this.targetDead(other)) continue;
-      if (actor && !this.isHostile(actor, other)) continue;
-      threats.push(this.targetPosition(other, new THREE.Vector3()));
+      const position = this.targetPosition(other, new THREE.Vector3());
+      if (actor && !this.isHostile(actor, other)) friends.push(position);
+      else threats.push(position);
     }
     threats.push(...this.extraThreats());
     for (const candidate of this.spawnCandidates) {
@@ -1269,7 +1330,10 @@ export class EnemyManager {
       }
       const recentlyUsed = this.recentSpawnMarkers.indexOf(candidate.markerIndex);
       const recentPenalty = recentlyUsed < 0 ? 0 : (this.recentSpawnMarkers.length - recentlyUsed) * 240;
-      const score = Math.min(nearest, 2200) - visibleThreats * 1300 - recentPenalty;
+      // Team modes: prefer spawning near teammates (FFA has no friends, so no bonus).
+      const friendDistance = friends.reduce((min, point) => Math.min(min, candidate.position.distanceTo(point)), Infinity);
+      const friendBonus = friends.length ? 500 * (1 - Math.min(friendDistance, 1500) / 1500) : 0;
+      const score = Math.min(nearest, 2200) - visibleThreats * 1300 - recentPenalty + friendBonus;
       if (score > bestScore) {
         bestScore = score;
         best = candidate;

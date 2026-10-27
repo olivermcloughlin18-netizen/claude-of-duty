@@ -84,9 +84,20 @@ export class FreeForAllMatch {
     };
     this.feed.unshift(entry);
     this.feed.length = Math.min(this.feed.length, this.feedLimit);
-    if (credited && killer.kills >= this.scoreLimit) this.finish(killer.id);
+    if (credited) this.afterCredit(killer, victim);
     return entry;
   }
+
+  // Subclass seams: how a credited kill scores, and what the score column shows.
+  afterCredit(killer) {
+    if (killer.kills >= this.scoreLimit) this.finish(killer.id);
+  }
+
+  scoreOf(entry) { return entry.kills; }
+
+  teamsState() { return null; }
+
+  get scoreLabel() { return 'Kills'; }
 
   finish(winnerId = null) {
     if (this.phase === 'ended') return this.winnerId;
@@ -99,7 +110,7 @@ export class FreeForAllMatch {
 
   get standings() {
     return [...this.combatants.values()]
-      .sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || Number(b.human) - Number(a.human) ||
+      .sort((a, b) => this.scoreOf(b) - this.scoreOf(a) || b.kills - a.kills || a.deaths - b.deaths || Number(b.human) - Number(a.human) ||
         a.name.localeCompare(b.name));
   }
 
@@ -116,7 +127,7 @@ export class FreeForAllMatch {
       deaths: entry.deaths,
       streak: entry.streak,
       team: entry.team ?? null,
-      score: entry.kills,
+      score: this.scoreOf(entry),
       place: index + 1,
     }));
     return {
@@ -129,8 +140,8 @@ export class FreeForAllMatch {
       remainingSeconds: Math.ceil(this.remainingSeconds),
       winnerId: this.winnerId,
       winnerTeam: this.winnerTeam,
-      teams: null,
-      scoreLabel: 'Kills',
+      teams: this.teamsState(),
+      scoreLabel: this.scoreLabel,
       standings,
       feed: this.feed.map((event) => ({ ...event })),
     };
