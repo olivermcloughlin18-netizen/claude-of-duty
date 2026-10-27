@@ -2486,6 +2486,7 @@ async function start() {
       showHitmarker,
       notify,
       showMedal: showMedalPopup,
+      refillAmmo: () => { for (const slot of weaponSlots.values()) slot.controller.resetLoadout(); },
     };
     const debugApi = createDebugApi();
     for (const system of systems) {
