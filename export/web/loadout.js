@@ -41,9 +41,9 @@ export function sanitizeClass(raw, fallback = DEFAULT_CLASSES[0]) {
   const result = {
     name,
     primary,
-    primaryAttachments: knownAttachments(value.primaryAttachments, MAX_PRIMARY_ATTACHMENTS),
+    primaryAttachments: knownAttachments(value.primaryAttachments ?? fallback.primaryAttachments, MAX_PRIMARY_ATTACHMENTS),
     secondary,
-    secondaryAttachments: knownAttachments(value.secondaryAttachments, MAX_SECONDARY_ATTACHMENTS),
+    secondaryAttachments: knownAttachments(value.secondaryAttachments ?? fallback.secondaryAttachments, MAX_SECONDARY_ATTACHMENTS),
   };
   try {
     resolveWeapon(result.primary, result.primaryAttachments);
@@ -97,9 +97,10 @@ const STYLE = `
 `;
 
 const el = (tag, props = {}, ...children) => {
+  const { dataset = {}, ...rest } = props;
   const node = document.createElement(tag);
-  Object.assign(node, props);
-  for (const [key, value] of Object.entries(props.dataset ?? {})) node.dataset[key] = value;
+  Object.assign(node, rest);
+  for (const [key, value] of Object.entries(dataset)) node.dataset[key] = value;
   node.append(...children);
   return node;
 };

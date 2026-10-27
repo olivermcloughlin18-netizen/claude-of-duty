@@ -391,10 +391,10 @@ export class Viewmodel {
       this.root.updateMatrixWorld(true);
       const muzzle = jGun.worldToLocal(this.tagFlash.getWorldPosition(new THREE.Vector3()));
       const can = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.85, 0.85, 8, 20).rotateZ(Math.PI / 2),
+        new THREE.CylinderGeometry(1, 1, 9, 20).rotateZ(Math.PI / 2),
         new THREE.MeshStandardMaterial({ color: 0x24272b, metalness: 0.35, roughness: 0.5 }),
       );
-      can.position.set(muzzle.x + 2.2, muzzle.y, muzzle.z);
+      can.position.set(muzzle.x + 2.7, muzzle.y, muzzle.z);
       can.frustumCulled = false;
       jGun.add(can);
       this.attachmentMeshes.suppressor = can;

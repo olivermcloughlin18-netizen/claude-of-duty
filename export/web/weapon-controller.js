@@ -126,11 +126,17 @@ export class WeaponController {
     this.reloading = false;
   }
 
-  update(deltaSeconds, { canFire = true } = {}) {
+  update(deltaSeconds, options) {
+    const shots = this.step(deltaSeconds, options);
+    // Decayed after the shot test, so a long frame cannot eat a fresh pull.
+    this.pullBuffer = Math.max(0, this.pullBuffer - Math.max(0, Math.min(Number(deltaSeconds) || 0, 0.25)));
+    return shots;
+  }
+
+  step(deltaSeconds, { canFire = true } = {}) {
     const dt = Math.max(0, Math.min(Number(deltaSeconds) || 0, 0.25));
     const shortestInterval = Math.min(this.shotInterval, this.initialShotInterval ?? this.shotInterval);
     this.cooldown = Math.max(-shortestInterval * 4, this.cooldown - dt);
-    this.pullBuffer = Math.max(0, this.pullBuffer - dt);
 
     // A started burst finishes even if the trigger is let go.
     const burstRunning = this.fireMode === 'burst' && this.triggerShotCount > 0 && this.triggerShotCount < BURST_SHOTS;
