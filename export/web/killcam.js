@@ -99,11 +99,11 @@ const STYLE = `
 .kc-prog i{display:block;height:100%;width:100%;background:var(--fe-accent,#7fffc4);box-shadow:0 0 10px var(--fe-accent,#7fffc4);transform-origin:left;transform:scaleX(0)}
 .kc-fade{position:absolute;inset:0;background:#000;opacity:1}
 body.kc-on #hud,body.kc-on #hud-minimap,body.kc-on #hud-compass,body.kc-on #hud-ammo,body.kc-on #crosshair,
+body.kc-on #damage,body.kc-on #death-card,body.kc-on #match-status,body.kc-on #medals,body.kc-on #killfeed{opacity:0!important;visibility:hidden!important}
 body.kc-final #scoreboard{background:transparent;pointer-events:none}
 body.kc-final .scoreboard-panel{background:transparent;border-color:transparent;pointer-events:none}
 body.kc-final .scoreboard-panel>:not(#touch-restart){visibility:hidden}
 body.kc-final #touch-restart{pointer-events:auto;position:fixed;left:50%;bottom:3vh;transform:translateX(-50%)}
-body.kc-on #damage,body.kc-on #death-card,body.kc-on #match-status,body.kc-on #medals,body.kc-on #killfeed{opacity:0!important;visibility:hidden!important}
 `;
 
 function el(tag, className, text) {
