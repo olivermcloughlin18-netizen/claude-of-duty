@@ -2401,7 +2401,7 @@ async function start() {
     await Promise.all([viewmodelPromise, weaponEffects.loadAudio(), enemyPromise, loadEnvironment()]);
     refreshTextureFiltering();
 
-    const botNames = ['ADMIRAL', 'CORSAIR', 'DEADEYE', 'MARINER', 'ROGUE', 'VIPER'];
+    const botNames = ['ADMIRAL', 'CORSAIR', 'DEADEYE', 'MARINER', 'ROGUE', 'VIPER', 'BRAVO'];
     for (const enemy of enemies?.enemies ?? []) {
       const id = `bot-${enemy.index}`;
       const name = botNames[enemy.index] ?? `BOT ${enemy.index + 1}`;

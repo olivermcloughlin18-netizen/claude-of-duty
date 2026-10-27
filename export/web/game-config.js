@@ -3,7 +3,7 @@
 import { MAP_IDS } from './maps.js';
 import { MODES } from './modes.js';
 
-export const DEFAULT_SERVER_URL = ''; // integrator sets the wss://... Railway URL; '' = online hidden
+export const DEFAULT_SERVER_URL = 'wss://mp-production-613e.up.railway.app';
 export const SETUP_KEY = 'cod.setup.v1';
 
 const DEFAULTS = { mapId: 'hijacked', modeId: 'ffa', name: '' };

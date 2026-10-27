@@ -49,6 +49,17 @@ gameplay implementation details:
   touch mode, pointer count, movement axes, and action state.
 - `setGraphicsPreset('auto' | 'performance' | 'quality')` changes the saved
   graphics setting; `getState().performance.graphics` observes rendering quality.
+- `killCombatant(id, {attackerId, weaponId, cause, region})` kills through the
+  real damage path and returns `{killed, event}`; `recentEvents()` returns the
+  event bus history.
+- `setLoadout({primary, secondary, ...})` equips a class directly.
+- `grantStreak(id)` and `useStreak(id, [x, y, z]?)` stage killstreaks (UAV,
+  Hunter Killer, care package, air strike).
+- `setXp(n)` sets progression XP; `ageTags(seconds)` fast-forwards Kill
+  Confirmed tag expiry.
+- `getState()` also carries `config {mapId, modeId, room, online}`,
+  `combatants`, and `systems.{net, modeRules, loadout, killstreaks, progression,
+  killcam}`.
 
 When adding a gameplay system, expose only compact, serializable observations
 or safe test controls through this API. Do not expose frame-sized geometry,

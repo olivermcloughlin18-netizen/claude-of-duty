@@ -17,6 +17,18 @@ Hijacked map export, with capsule collision and a baked Recast navigation mesh.
 > animations, names, and other third-party material remain the property of
 > their respective owners and are not relicensed. See [Asset rights](ASSET_NOTICE.md).
 
+## This fork
+
+Self-hosted at
+**[olivermcloughlin18-netizen.github.io/claude-of-duty](https://olivermcloughlin18-netizen.github.io/claude-of-duty/)**,
+forked from [froydinger/claude-of-duty](https://github.com/froydinger/claude-of-duty)
+(itself a fork of luckeyfaraday's original). It adds Team Deathmatch, Kill
+Confirmed and Gun Game, killstreaks (UAV, Hunter Killer, care package, air
+strike), SMGs, snipers and a shotgun with attachments and a class editor, the
+Kestrel Heights map, a killcam, XP levels, and online free-for-all through the
+WebSocket server in `server/` (hosted on Railway). `PLAN.md` holds the build
+plan and system contracts.
+
 ## Give a shout-out
 
 If you use this code, learn from it, stream it, or build something with it,
