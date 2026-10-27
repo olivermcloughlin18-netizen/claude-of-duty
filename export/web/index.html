@@ -453,7 +453,7 @@
      `hud_medals_*` icon from ui/medals/, name and +XP in HUD type. They stack
      downwards under the crosshair line, newest on top. */
   #medals {
-    position: fixed; z-index: 2; right: 9%; top: 40%;
+    position: fixed; z-index: 2; right: max(9%, 230px); top: 40%; /* clear of the killstreak column (#ks-column) */
     display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
     pointer-events: none;
   }
