@@ -2,7 +2,7 @@
 // are untouched; every other map arrives as `maps/<id>/manifest.json` and goes
 // through fromManifest(), which returns an entry of the SAME shape.
 
-export const MAP_IDS = ['hijacked']; // integrator appends the new-map id at the gate
+export const MAP_IDS = ['hijacked', 'kestrel'];
 
 export const HIJACKED = Object.freeze({
   id: 'hijacked',

@@ -410,6 +410,7 @@
     "lut": "textures/lut.png",
     "env": "textures/env/",
     "probe": "textures/probe/",
-    "minimap": "minimap.png"
+    "minimap": "minimap.png",
+    "card": "card.jpg"
   }
 }
