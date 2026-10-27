@@ -29,4 +29,4 @@ jobs:
           path: .work/cloudflare-pages
       - name: Publish game
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
