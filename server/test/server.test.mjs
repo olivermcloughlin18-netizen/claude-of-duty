@@ -180,3 +180,48 @@ test('heartbeat timeout drops silent connection', async () => {
   assert.equal(s.server.rooms.size, 0);
   await s.server.close();
 });
+
+test('shot relay: peers get it, sender does not; bad shots rejected; throttled', async () => {
+  const { a, b, done } = await duel();
+  const shot = { t: 'shot', o: [0, 60, 0], e: [500, 60, 0], weaponId: 'sa58' };
+  a.send(shot);
+  const got = await b.wait('shot');
+  assert.deepEqual([got.id, got.o, got.e, got.weaponId], [a.id, shot.o, shot.e, 'sa58']);
+  a.send(shot); // inside shotMinMs: dropped
+  await sleep(150);
+  assert.equal(b.count('shot'), 1);
+  assert.equal(a.count('shot'), 0);
+  a.send({ ...shot, o: [0, 'x', 0] });
+  assert.equal((await a.wait('error')).code, 'bad_message');
+  await done();
+});
+
+test('map: creator sets it, joiners get it echoed, invalid map ignored', async () => {
+  const s = await startServer();
+  const a = client(s.url); const b = client(s.url); const c = client(s.url); const d = client(s.url);
+  await a.open; a.send({ t: 'join', room: null, name: 'A', map: 'kestrel' });
+  const ja = await a.wait('joined');
+  assert.equal(ja.map, 'kestrel');
+  await b.open; b.send({ t: 'join', room: ja.room, name: 'B', map: 'hijacked' }); // joiner's map ignored
+  assert.equal((await b.wait('joined')).map, 'kestrel');
+  assert.equal((await c.join(null, 'C')).map, null); // old clients: no map
+  await d.open; d.send({ t: 'join', room: null, name: 'D', map: '../etc/passwd' });
+  assert.equal((await d.wait('joined')).map, null);
+  for (const x of [a, b, c, d]) x.ws.close();
+  await s.server.close();
+});
+
+test('weapons.json matches weapons.js (drift)', async () => {
+  const { buildTable } = await import('../../.tools/sync_server_weapons.mjs');
+  const { WEAPONS } = await import('../server.js');
+  assert.deepEqual({ ...WEAPONS }, buildTable());
+});
+
+test('hp regenerates after the delay and shows in snapshots', async () => {
+  const { a, b, claim, done } = await duel({ regenDelayMs: 100, regenPerSec: 1000, killLimit: 5 });
+  a.send(claim({ damage: 55, headshot: false }));
+  assert.equal((await b.wait('damage')).hp, 45);
+  const snap = await a.wait('snapshot', (m) => m.players.find((p) => p.id === b.id)?.hp === 100);
+  assert.equal(snap.players.find((p) => p.id === b.id).alive, true);
+  await done();
+});
