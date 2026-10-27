@@ -149,6 +149,6 @@ export async function run({ page, screenshot, artifactRoot, writeJson }) {
       notPlayingAfter: after.systems.killcam.playing === false,
       videoRecorded: typeof video === 'string' && video.endsWith('.webm'),
     },
-    probe: { botVisibility, startedMs: started.ms, startFrames, respawnSeconds, camDistance, bannerText, frames, video, board, finalKind: final.s.systems.killcam },
+    probe: { botVisibility, startedMs: started.ms, startFrames, respawnSeconds, camDistance, bannerText, shots, video, board, finalKind: final.s.systems.killcam },
   };
 }

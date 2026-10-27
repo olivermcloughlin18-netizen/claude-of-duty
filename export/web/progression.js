@@ -94,7 +94,7 @@ const STYLE = `
 .pg-hex::before{content:'';position:absolute;inset:3px;background:#07141c;clip-path:inherit}
 .pg-hex span{position:relative;font-size:23px;font-weight:700;color:var(--fe-accent,#7fffc4);font-variant-numeric:tabular-nums}
 .pg-hex.max span{color:#ffcf5a}
-.pg-meta{flex:1;min-width:0}
+.pg-meta{flex:1;min-width:0;text-align:left}
 .pg-name{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:15px;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
 .pg-name i{font-style:normal;font-size:11px;letter-spacing:.18em;color:#ffcf5a}
 .pg-bar{height:6px;margin:7px 0 5px;background:rgba(160,200,220,.18);overflow:hidden}

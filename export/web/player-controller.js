@@ -197,6 +197,7 @@ export class PlayerController {
     this.slideBoost = Math.max(1, numberOr(options.slideBoost, 1.35));
     this.slideDuration = Math.max(0.1, numberOr(options.slideDuration, 0.65));
     this.slideCooldown = Math.max(0, numberOr(options.slideCooldown, 0.8));
+    this.slideBuffer = Math.max(0, numberOr(options.slideBuffer, 0.25));
     this.slideMinSpeed = Math.max(0, numberOr(options.slideMinSpeed, this.sprintSpeed * 0.8));
 
     this.coyoteTime = Math.max(0, numberOr(options.coyoteTime, 0.1));
@@ -241,6 +242,8 @@ export class PlayerController {
     this._slideSpeed = 0;
     this._slideDir = new THREE.Vector3();
     this._crouchPrev = false;
+    this._slideBuffer = 0;
+    this._slideAir = 0;
     this._accumulator = 0;
     this._jumpBufferTimer = 0;
     this._coyoteTimer = 0;
@@ -580,6 +583,9 @@ export class PlayerController {
   _updateSlide(dt) {
     const pressed = this.input.crouch && !this._crouchPrev;
     this._crouchPrev = this.input.crouch;
+    // A press just before touchdown still slides: stairs and lips drop ground
+    // contact for a few steps, so remember the press briefly.
+    this._slideBuffer = pressed ? this.slideBuffer : Math.max(0, this._slideBuffer - dt);
     this._slideCooldownTimer = Math.max(0, this._slideCooldownTimer - dt);
 
     if (this.sliding) {
@@ -587,18 +593,23 @@ export class PlayerController {
       const horizontal = Math.hypot(this.velocity.x, this.velocity.z);
       // Airborne, out of time, or stopped dead by geometry (the velocity left
       // over from the last step is post-collision).
+      // Ground contact drops for a step or two on stairs and lips, so only a
+      // sustained airborne spell (a real jump or drop) ends it.
+      this._slideAir = this.onFloor ? 0 : this._slideAir + dt;
       if (
-        this._slideTime >= this.slideDuration || !this.onFloor || this.onLadder ||
+        this._slideTime >= this.slideDuration || this._slideAir > 0.18 || this.onLadder ||
         (this._slideTime > 0.08 && horizontal < this._slideSpeed * 0.4)
       ) this._endSlide(this.slideCooldown);
       return;
     }
 
-    if (!pressed || this.crouched || !this.onFloor || this.onLadder) return;
+    if (this._slideBuffer <= 0 || !this.onFloor || this.onLadder) return;
     if (this._slideCooldownTimer > 0 || !this.input.sprint || this.input.forward <= 0) return;
     if (Math.hypot(this.velocity.x, this.velocity.z) < this.slideMinSpeed) return;
     this._slideDir.set(this.velocity.x, 0, this.velocity.z).normalize();
     this.sliding = true;
+    this._slideBuffer = 0;
+    this._slideAir = 0;
     this._slideTime = 0;
     this._slideSpeed = this.sprintSpeed * this.slideBoost;
   }
