@@ -2,6 +2,7 @@
 // Protocol: server/PROTOCOL.md. No dependencies; uses globalThis.WebSocket (browsers, Node 22+).
 
 const STATE_MIN_INTERVAL_MS = 45; // keep under the server's rate limit (~22 Hz max)
+const SHOT_MIN_INTERVAL_MS = 90; // cosmetic tracer relay, ~11 Hz max
 const PING_MS = 5000;
 const SILENCE_MS = 15000;
 const FATAL = new Set(['room_not_found', 'room_full', 'too_many_rooms', 'rate_limited']);
@@ -23,6 +24,7 @@ export function createNetClient({
   let roomCode = null;
   let name = 'Player';
   let wantRoom = null;
+  let wantMap = null; // sent on join; only the room creator's map is kept by the server
   let connected = false; // socket open AND joined
   let wantOpen = false;
   let retries = 0;
@@ -30,6 +32,7 @@ export function createNetClient({
   let pingTimer = null;
   let lastRx = 0;
   let lastStateAt = 0;
+  let lastShotAt = 0;
   let pending = null; // { resolve, reject } for the current connect() call
 
   const emit = (type, payload) => {
@@ -55,7 +58,7 @@ export function createNetClient({
     sock.onopen = () => {
       if (ws !== sock) return;
       lastRx = Date.now();
-      rawSend({ t: 'join', room: wantRoom, name });
+      rawSend({ t: 'join', room: wantRoom, name, ...(wantMap ? { map: wantMap } : {}) });
       pingTimer = setInterval(() => {
         if (Date.now() - lastRx > SILENCE_MS) return sock.close();
         rawSend({ t: 'ping', c: Date.now() });
@@ -102,15 +105,17 @@ export function createNetClient({
         emit('disconnected', undefined);
       }
     };
-    sock.onerror = () => {}; // onclose follows
+    // Browsers fire onclose after onerror; Node's WebSocket does not when the connection is refused.
+    sock.onerror = () => { if (sock.readyState !== 1) sock.onclose?.(); };
   }
 
   return {
     /** Resolves with the `joined` message. roomCode null = create a new room. */
-    connect(code = null, playerName = 'Player') {
+    connect(code = null, playerName = 'Player', map = null) {
       this.disconnect();
       wantRoom = code ? String(code).toUpperCase() : null;
       name = String(playerName ?? 'Player');
+      wantMap = map ? String(map) : null;
       wantOpen = true;
       retries = 0;
       return new Promise((resolve, reject) => {
@@ -124,6 +129,13 @@ export function createNetClient({
       if (!connected || now - lastStateAt < STATE_MIN_INTERVAL_MS) return false;
       lastStateAt = now;
       return rawSend({ t: 'state', pos: s.pos, yaw: s.yaw, pitch: s.pitch, vel: s.vel, weaponId: s.weaponId, crouch: s.crouch });
+    },
+    /** Cosmetic shot relay {o, e, weaponId}; dropped when throttled (~11 Hz). */
+    sendShot(s) {
+      const now = Date.now();
+      if (!connected || now - lastShotAt < SHOT_MIN_INTERVAL_MS) return false;
+      lastShotAt = now;
+      return rawSend({ t: 'shot', o: s.o, e: s.e, weaponId: s.weaponId });
     },
     sendHit(c) {
       if (!connected) return false;

@@ -1,0 +1,38 @@
+{
+  "an94": {
+    "damage": 40,
+    "rpm": 1172
+  },
+  "m27": {
+    "damage": 33,
+    "rpm": 938
+  },
+  "sa58": {
+    "damage": 55,
+    "rpm": 782
+  },
+  "saritch": {
+    "damage": 50,
+    "rpm": 670
+  },
+  "scar": {
+    "damage": 40,
+    "rpm": 782
+  },
+  "sig556": {
+    "damage": 40,
+    "rpm": 1173
+  },
+  "tar21": {
+    "damage": 40,
+    "rpm": 938
+  },
+  "type95": {
+    "damage": 33,
+    "rpm": 1173
+  },
+  "xm8": {
+    "damage": 35,
+    "rpm": 1563
+  }
+}

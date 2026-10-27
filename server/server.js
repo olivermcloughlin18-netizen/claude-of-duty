@@ -1,27 +1,19 @@
 // Claude of Duty multiplayer server. Free-for-all rooms, server-authoritative hits.
 // Contract: see PROTOCOL.md. World units are the game's own (T6 inches, player 72 tall).
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import { randomInt, randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 
-// Per-weapon base damage and rpm mirror WEAPON_DEFINITIONS in export/web/index.html.
-// ponytail: hand-copied table; if weapons change, update here (or serve it from a shared json).
-export const WEAPONS = Object.freeze({
-  m27: { damage: 33, rpm: 750 },
-  an94: { damage: 40, rpm: 625 },
-  sa58: { damage: 55, rpm: 625 },
-  saritch: { damage: 50, rpm: 536 },
-  scar: { damage: 40, rpm: 625 },
-  sig556: { damage: 40, rpm: 938 },
-  tar21: { damage: 40, rpm: 750 },
-  type95: { damage: 33, rpm: 938 },
-  xm8: { damage: 35, rpm: 1250 },
-});
+// Per-weapon max claim damage (damage x pellets) and rpm (fastest mode x 1.25 slack), generated from
+// export/web/weapons.js by .tools/sync_server_weapons.mjs. Lives beside server.js so `railway up` ships it.
+export const WEAPONS = Object.freeze(JSON.parse(readFileSync(new URL('./weapons.json', import.meta.url), 'utf8')));
 
 const HEADSHOT_MULT = 2; // enemy-system.js head hitbox multiplier
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const COORD_LIMIT = 1e5;
+const MAP_ID = /^[a-z0-9_-]{1,24}$/;
 
 const envInt = (name, fallback) => {
   const n = Number.parseInt(process.env[name] ?? '', 10);
@@ -46,13 +38,16 @@ export const DEFAULTS = {
   heartbeatMs: 5000,
   timeoutMs: 15_000,
   joinTimeoutMs: 10_000,
-  bucketCapacity: 40,
-  bucketRefillPerSec: 30,
+  bucketCapacity: 100,
+  bucketRefillPerSec: 70, // state 22 + shot 10 + hit claims (up to ~20) per second, with headroom
   abuseDrops: 30, // dropped messages per 5 s window before kick
   maxBadMessages: 20,
   fireRateSlack: 0.8, // accept shots down to 80% of the weapon's interval (jitter)
   posTolerance: 300, // world units claimed vs last server position (sprint 450/s + latency)
   maxRange: 8000,
+  regenDelayMs: 4000, // hp regenerates (as the offline game does) this long after the last damage taken
+  regenPerSec: 25,
+  shotMinMs: 40, // relayed `shot` messages faster than this are dropped
 };
 
 // ---------- validation helpers ----------
@@ -201,7 +196,8 @@ export function createServer(options = {}) {
       let c;
       do c = Array.from({ length: 5 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
       while (rooms.has(c));
-      room = { code: c, players: new Map(), phase: 'waiting', endsAt: 0, nextMatchAt: 0, winnerId: null, creatorIp: conn.ip, dirty: false };
+      room = { code: c, players: new Map(), phase: 'waiting', endsAt: 0, nextMatchAt: 0, winnerId: null, creatorIp: conn.ip, dirty: false,
+        map: typeof msg.map === 'string' && MAP_ID.test(msg.map) ? msg.map : null };
       rooms.set(c, room);
     } else {
       room = rooms.get(code);
@@ -212,14 +208,14 @@ export function createServer(options = {}) {
     const player = {
       id, ws: conn.ws, name: sanitizeName(msg.name, `Player${room.players.size + 1}`),
       kills: 0, deaths: 0, hp: cfg.maxHealth, alive: true, respawnAt: 0,
-      pos: null, yaw: 0, pitch: 0, vel: [0, 0, 0], weaponId: 'm27', crouch: false, lastShotAt: 0,
+      pos: null, yaw: 0, pitch: 0, vel: [0, 0, 0], weaponId: 'm27', crouch: false, lastShotAt: 0, lastShotRelayAt: 0, lastDamageAt: 0,
     };
     conn.room = room;
     conn.player = player;
     room.players.set(id, player);
     send(conn.ws, {
       t: 'joined', id, room: room.code, maxPlayers: cfg.maxPlayers,
-      players: [...room.players.values()].map(publicPlayer), match: matchInfo(room),
+      players: [...room.players.values()].map(publicPlayer), match: matchInfo(room), map: room.map,
     });
     broadcast(room, { t: 'peer_joined', player: publicPlayer(player) }, player);
     broadcast(room, scores(room));
@@ -237,6 +233,16 @@ export function createServer(options = {}) {
     if (msg.weaponId !== undefined) p.weaponId = msg.weaponId;
     p.crouch = msg.crouch === true;
     conn.room.dirty = true;
+  }
+
+  // Cosmetic relay so peers can draw tracers and fire pings. No damage rides on it.
+  function onShot(conn, msg) {
+    const room = conn.room, p = conn.player;
+    if (!isVec3(msg.o) || !isVec3(msg.e) || typeof msg.weaponId !== 'string' || !/^[a-z0-9_]{1,16}$/.test(msg.weaponId)) return bad(conn, 'bad shot');
+    const now = Date.now();
+    if (!p.alive || room.phase !== 'playing' || now - p.lastShotRelayAt < cfg.shotMinMs) return;
+    p.lastShotRelayAt = now;
+    broadcast(room, { t: 'shot', id: p.id, o: msg.o, e: msg.e, weaponId: msg.weaponId }, p);
   }
 
   function reject(conn, msg, reason) {
@@ -269,6 +275,7 @@ export function createServer(options = {}) {
     shooter.lastShotAt = now;
     const amount = Math.min(msg.damage, target.hp);
     target.hp -= amount;
+    target.lastDamageAt = now;
     broadcast(room, {
       t: 'damage', targetId: target.id, attackerId: shooter.id, weaponId: msg.weaponId,
       amount, hp: target.hp, headshot: msg.headshot,
@@ -329,6 +336,7 @@ export function createServer(options = {}) {
         case 'ping': return send(ws, { t: 'pong', c: isNum(msg.c, 1e15) ? msg.c : 0 });
         case 'state': return conn.room ? onState(conn, msg) : send(ws, { t: 'error', code: 'not_joined', message: 'join first' });
         case 'hit': return conn.room ? onHit(conn, msg) : send(ws, { t: 'error', code: 'not_joined', message: 'join first' });
+        case 'shot': return conn.room ? onShot(conn, msg) : send(ws, { t: 'error', code: 'not_joined', message: 'join first' });
         case 'leave': return ws.close(1000, 'leave');
         default: return bad(conn, 'unknown type');
       }
@@ -348,6 +356,10 @@ export function createServer(options = {}) {
         if (room.players.size >= 2) startMatch(room, now); else room.phase = 'waiting';
       }
       for (const p of room.players.values()) {
+        if (p.alive && p.hp < cfg.maxHealth && room.phase === 'playing' && now - p.lastDamageAt > cfg.regenDelayMs) {
+          p.hp = Math.min(cfg.maxHealth, p.hp + cfg.regenPerSec * (cfg.tickMs / 1000));
+          room.dirty = true;
+        }
         if (!p.alive && room.phase === 'playing' && now >= p.respawnAt) {
           p.alive = true; p.hp = cfg.maxHealth;
           broadcast(room, { t: 'respawn', id: p.id, hp: p.hp });
