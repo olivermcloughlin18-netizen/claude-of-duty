@@ -1,5 +1,8 @@
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+// Buttons that fire once on press and are handled by the game, not by held state.
+export const ACTION_KINDS = new Set(['reload', 'streak', 'swap']);
+
 // Pointer ownership is independent of DOM hit testing. A finger keeps its job
 // until released, even when it crosses another control or leaves the screen.
 export class TouchInput {
@@ -24,7 +27,7 @@ export class TouchInput {
     if (kind === 'jump') this.jumpQueued = true;
     if (kind === 'aim') this.aim = !this.aim;
     if (kind === 'crouch') this.crouch = !this.crouch;
-    if (kind === 'reload') this.onAction(kind);
+    if (ACTION_KINDS.has(kind)) this.onAction(kind);
     return true;
   }
 

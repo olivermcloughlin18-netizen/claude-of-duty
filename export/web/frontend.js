@@ -27,12 +27,12 @@ const CAPTIONS = {
   'enemy weapon': 'enemy weapon',
 };
 
-export const SCREENS = ['welcome', 'loading', 'title', 'pause', 'class', 'error'];
+export const SCREENS = ['welcome', 'loading', 'title', 'pause', 'class', 'setup', 'error'];
 
 export class Frontend {
   constructor({
     elements = null, onPlay = null, onResume = null, onSelectWeapon = null, onOpenClass = null,
-    waitingForInput = false,
+    onApplySetup = null, waitingForInput = false,
   } = {}) {
     this.elements = elements;
     this.onPlay = onPlay;
@@ -41,6 +41,8 @@ export class Frontend {
     // Fired when the class screen opens so the game can fetch the rifles it
     // has not loaded yet. Only a player who browses classes pays for them.
     this.onOpenClass = onOpenClass;
+    // Receives {mapId, modeId, name, room}; the host saves it and reloads.
+    this.onApplySetup = onApplySetup;
 
     this.screen = waitingForInput ? 'welcome' : 'loading';
     this.playing = false;
@@ -54,6 +56,8 @@ export class Frontend {
     this.weaponOptions = [];
     this.selectedWeapon = null;
     this.classReturnScreen = 'title';
+    this.setupReturnScreen = 'title';
+    this.setup = { maps: [], modes: [], mapId: null, modeId: null, name: '', room: '', online: false };
 
     this.bindElements();
     this.render();
@@ -293,6 +297,68 @@ export class Frontend {
     return result ?? selected;
   }
 
+  /** Supply the setup screen's data: maps [{id,name,card}], modes [{id,name}], current choice. */
+  setSetup({ maps, modes, mapId, modeId, name, online } = {}) {
+    const next = this.setup;
+    if (maps) next.maps = maps.map((map) => ({ id: map.id, name: map.name, card: map.card ?? null }));
+    if (modes) next.modes = modes.map((mode) => ({ id: mode.id, name: mode.name }));
+    if (mapId !== undefined) next.mapId = mapId;
+    if (modeId !== undefined) next.modeId = modeId;
+    if (name !== undefined) next.name = String(name ?? '');
+    if (online !== undefined) next.online = Boolean(online);
+    this.render();
+    return this.getState().setup;
+  }
+
+  /** Open the map / mode / online screen from title or pause. */
+  openSetup() {
+    if (this.screen !== 'title' && this.screen !== 'pause') return false;
+    this.setupReturnScreen = this.screen;
+    this.screen = 'setup';
+    this.playing = false;
+    this.render();
+    return true;
+  }
+
+  closeSetup() {
+    if (this.screen !== 'setup') return false;
+    this.screen = this.setupReturnScreen === 'pause' ? 'pause' : 'title';
+    this.playing = false;
+    this.render();
+    return this.screen;
+  }
+
+  chooseMap(id) {
+    if (this.screen !== 'setup' || !this.setup.maps.some((map) => map.id === id)) return false;
+    this.setup.mapId = id;
+    this.render();
+    return id;
+  }
+
+  chooseMode(id) {
+    if (this.screen !== 'setup' || !this.setup.modes.some((mode) => mode.id === id)) return false;
+    this.setup.modeId = id;
+    this.render();
+    return id;
+  }
+
+  setPlayerName(name) {
+    this.setup.name = String(name ?? '');
+  }
+
+  setRoomCode(code) {
+    this.setup.room = String(code ?? '').toUpperCase();
+  }
+
+  /** Apply the current choice; `room` is 'NEW' to create an online room or a code to join one. */
+  applySetup({ room = null } = {}) {
+    if (this.screen !== 'setup') return false;
+    const { mapId, modeId, name } = this.setup;
+    const payload = { mapId, modeId, name, room };
+    this.onApplySetup?.(payload);
+    return payload;
+  }
+
   fail(message) {
     this.screen = 'error';
     this.playing = false;
@@ -336,6 +402,7 @@ export class Frontend {
       percent: Math.round(this.fraction * 100),
       caption: this.screen === 'loading' ? this.caption : '',
       selectedWeapon: this.selectedWeapon,
+      setup: { mapId: this.setup.mapId, modeId: this.setup.modeId, name: this.setup.name, online: this.setup.online },
     };
   }
 
@@ -359,6 +426,21 @@ export class Frontend {
         this.chooseWeapon(card.dataset.weaponId);
       });
     }
+    // Setup cards are built by the host after listMaps() resolves, so clicks
+    // are delegated from their containers rather than bound per card.
+    el.setupMaps?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const card = event.target.closest('[data-map-id]');
+      if (card) this.chooseMap(card.dataset.mapId);
+    });
+    el.setupModes?.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const card = event.target.closest('[data-mode-id]');
+      if (card) this.chooseMode(card.dataset.modeId);
+    });
+    el.setupName?.addEventListener('input', () => this.setPlayerName(el.setupName.value));
+    el.setupRoom?.addEventListener('input', () => this.setRoomCode(el.setupRoom.value));
+    for (const input of [el.setupName, el.setupRoom]) input?.addEventListener('click', (event) => event.stopPropagation());
   }
 
   /** Shell buttons, including class navigation and card confirmation. */
@@ -367,6 +449,11 @@ export class Frontend {
     if (name === 'class') return this.openClass();
     if (name === 'class-back') return this.closeClass();
     if (name === 'class-confirm') return this.confirmClass();
+    if (name === 'setup') return this.openSetup();
+    if (name === 'setup-back') return this.closeSetup();
+    if (name === 'setup-apply') return this.applySetup();
+    if (name === 'online-create') return this.applySetup({ room: 'NEW' });
+    if (name === 'online-join') return this.applySetup({ room: this.setup.room });
     return this.elements?.onAction?.(name);
   }
 
@@ -407,5 +494,12 @@ export class Frontend {
       el.classSelection.textContent = selected ? `${selected.name ?? selected.id} selected` : 'Select a rifle';
     }
     if (el.classConfirm) el.classConfirm.disabled = !selected?.ready;
+    for (const card of el.setupMaps?.querySelectorAll('[data-map-id]') ?? []) {
+      card.dataset.selected = String(card.dataset.mapId === this.setup.mapId);
+    }
+    for (const card of el.setupModes?.querySelectorAll('[data-mode-id]') ?? []) {
+      card.dataset.selected = String(card.dataset.modeId === this.setup.modeId);
+    }
+    if (el.setupOnline) el.setupOnline.hidden = !this.setup.online;
   }
 }

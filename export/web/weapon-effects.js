@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import foleyMap from './audio/foley-map.json' with { type: 'json' };
 
 const center = new THREE.Vector2(0, 0);
+const aimRight = new THREE.Vector3();
+const aimUp = new THREE.Vector3();
 const surfaceNormal = new THREE.Vector3();
 const planeNormal = new THREE.Vector3(0, 0, 1);
 const _listenerPosition = new THREE.Vector3();
@@ -414,11 +416,26 @@ export class WeaponEffects {
     return this.ceilingRaycaster.intersectObject(collisionRoot, true).length > 0;
   }
 
-  fire(camera, collisionRoot, muzzleCameraPosition = null, { targets = [], weapon = null } = {}) {
-    this.lastIndoors = this.isIndoors(camera, collisionRoot);
-    this.audio.play({ indoors: this.lastIndoors, weapon });
+  // `spread` is a cone half-angle in radians applied to the aim ray (shotgun
+  // pellets, hip fire). `silent` skips the report so a pellet volley sounds once.
+  fire(camera, collisionRoot, muzzleCameraPosition = null, {
+    targets = [], weapon = null, spread = 0, silent = false,
+  } = {}) {
+    if (!silent) {
+      this.lastIndoors = this.isIndoors(camera, collisionRoot);
+      this.audio.play({ indoors: this.lastIndoors, weapon });
+    }
     this.shotCount += 1;
     this.raycaster.setFromCamera(center, camera);
+    if (spread > 0) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.sqrt(Math.random()) * spread;
+      const direction = this.raycaster.ray.direction;
+      aimRight.setFromMatrixColumn(camera.matrixWorld, 0);
+      aimUp.setFromMatrixColumn(camera.matrixWorld, 1);
+      direction.addScaledVector(aimRight, Math.cos(angle) * radius)
+        .addScaledVector(aimUp, Math.sin(angle) * radius).normalize();
+    }
     this.raycaster.near = 0;
     this.raycaster.far = this.maxDistance;
     const roots = [collisionRoot, ...targets].filter(Boolean);
@@ -434,7 +451,7 @@ export class WeaponEffects {
       ? camera.localToWorld(muzzleCameraPosition.clone())
       : this.raycaster.ray.origin.clone().addScaledVector(this.raycaster.ray.direction, 12);
     this.addTracer(start, end);
-    if (hit?.object?.userData?.enemyHit) this.addFleshImpact(hit);
+    if (hit?.object?.userData?.enemyHit || hit?.object?.userData?.combatantHit) this.addFleshImpact(hit);
     else if (hit) this.addImpact(hit);
     return hit;
   }

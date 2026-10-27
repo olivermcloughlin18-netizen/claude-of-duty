@@ -20,10 +20,29 @@ export const MAP_CAL = {
   minimapSpan: 1250,
 };
 
-export function worldToMinimapUv(x, z) {
+export function worldToMinimapUv(x, z, cal = MAP_CAL) {
   return {
-    u: 0.5 + ((z - MAP_CAL.centerZ) * MAP_CAL.flipU) / MAP_CAL.size,
-    v: 0.5 + ((x - MAP_CAL.centerX) * MAP_CAL.flipV) / MAP_CAL.size,
+    u: 0.5 + ((z - cal.centerZ) * cal.flipU) / cal.size,
+    v: 0.5 + ((x - cal.centerX) * cal.flipV) / cal.size,
+  };
+}
+
+// Calibration for the Hud: the map's minimap entry when it ships an image,
+// otherwise a plain panel spanning the map bounds.
+export function minimapCalibration(map) {
+  const m = map?.minimap;
+  if (m) {
+    return { centerX: m.centerX, centerZ: m.centerZ, size: m.size, flipU: m.flipU, flipV: m.flipV, minimapSpan: m.span, image: m.image };
+  }
+  const { min, max } = map?.bounds ?? { min: [-1000, 0, -1000], max: [1000, 0, 1000] };
+  return {
+    centerX: (min[0] + max[0]) / 2,
+    centerZ: (min[2] + max[2]) / 2,
+    size: Math.max(max[0] - min[0], max[2] - min[2], 1),
+    flipU: 1,
+    flipV: -1,
+    minimapSpan: MAP_CAL.minimapSpan,
+    image: null,
   };
 }
 
@@ -35,6 +54,7 @@ const TAPE = { width: 512, height: 64, period: 512, northCenter: 9.5 };
 const VIEW = { minimap: 176, compassWidth: 264, compassHeight: 40 };
 const FIRE_PING_SECONDS = 1.2;
 export const MINIMAP_PING_SIZE = 80;
+const MINIMAP_DOT_SIZE = 26;
 
 const RAD2DEG = 180 / Math.PI;
 
@@ -47,15 +67,17 @@ function div(className, parent) {
 
 export class Hud {
   constructor({
-    minimap, compass, ammoRow, weaponName, damage,
+    minimap, compass, ammoRow, weaponName, damage, map = null,
   }) {
+    this.cal = minimapCalibration(map);
     this.minimap = minimap;
     this.damage = damage;
     this.weaponName = weaponName;
 
     this.rot = div('hud-minimap-rot', minimap);
     this.mapLayer = div('hud-minimap-map', this.rot);
-    this.mapLayer.style.backgroundImage = `url('${ART}compass_map_mp_hijacked.png')`;
+    if (this.cal.image) this.mapLayer.style.backgroundImage = `url('${this.cal.image}')`;
+    else this.mapLayer.style.background = 'linear-gradient(135deg, #1a2833, #101a22)';
     this.arrow = div('hud-minimap-arrow', minimap);
     this.arrow.style.backgroundImage = `url('${ART}compassping_player.png')`;
 
@@ -82,9 +104,11 @@ export class Hud {
       this.reserveDigits.push(this.buildDigit('hud-digit-reserve'));
     }
 
-    // Pooled firing pings; an enemy lights at most one at a time.
+    // Pooled firing pings; a contact lights at most one at a time.
     this.pings = [];
+    this.dots = [];
     this.firedAt = new Map();
+    this.counts = { contacts: 0, revealed: 0, friendly: 0 };
 
     this.lastMag = null;
     this.lastReserve = null;
@@ -94,9 +118,13 @@ export class Hud {
     return div(extraClass ? `hud-digit ${extraClass}` : 'hud-digit', this.ammoRow);
   }
 
-  // Called when enemy index fires so its map ping lights for a moment.
-  markEnemyFire(index) {
-    this.firedAt.set(index, performance.now());
+  // Called when a combatant (by id) fires so its map ping lights for a moment.
+  markFire(id) {
+    this.firedAt.set(id, performance.now());
+  }
+
+  getState() {
+    return { ...this.counts };
   }
 
   setDigit(element, value) {
@@ -119,8 +147,9 @@ export class Hud {
   }
 
   update({
-    x, z, yaw, enemies, weapon, health, hitFlash, dead,
+    x, z, yaw, contacts = [], weapon, health, hitFlash, dead,
   }) {
+    const cal = this.cal;
     const heading = ((-yaw * RAD2DEG) % 360 + 360) % 360;
 
     // Compass tape: N centers at heading 0 and the strip advances one period
@@ -137,18 +166,18 @@ export class Hud {
     // Minimap: the art spins about the player, who stays centred under a
     // fixed up-pointing arrow. `spin` is the clockwise rotation that brings
     // the facing direction to screen-up given the art's axis mapping.
-    const mmScale = VIEW.minimap / MAP_CAL.minimapSpan;
-    const mmSize = MAP_CAL.size * mmScale;
+    const mmScale = VIEW.minimap / cal.minimapSpan;
+    const mmSize = cal.size * mmScale;
     // World facing is (-sin yaw, -cos yaw); art X runs along world Z and art
     // Y along world X, flipped per MAP_CAL.
-    const artU = -Math.cos(yaw) * MAP_CAL.flipU;
-    const artV = -Math.sin(yaw) * MAP_CAL.flipV;
+    const artU = -Math.cos(yaw) * cal.flipU;
+    const artV = -Math.sin(yaw) * cal.flipV;
     const spin = -Math.atan2(artU, -artV);
     this.rot.style.transform = `rotate(${spin.toFixed(4)}rad)`;
     this.mapLayer.style.width = `${mmSize}px`;
     this.mapLayer.style.height = `${mmSize}px`;
     this.mapLayer.style.backgroundSize = `${mmSize}px ${mmSize}px`;
-    const mapUv = worldToMinimapUv(x, z);
+    const mapUv = worldToMinimapUv(x, z, cal);
     const px = mapUv.u * mmSize;
     const py = mapUv.v * mmSize;
     this.mapLayer.style.left = `${VIEW.minimap / 2 - px}px`;
@@ -156,10 +185,34 @@ export class Hud {
 
     const now = performance.now();
     let pingIndex = 0;
-    for (const enemy of enemies) {
-      if (enemy.dead) continue;
-      const firedAt = this.firedAt.get(enemy.index);
-      if (firedAt === undefined) continue;
+    let dotIndex = 0;
+    let revealed = 0;
+    let friendly = 0;
+    const place = (element, size, cx, cz) => {
+      element.style.left = `${px + (cz - z) * cal.flipU * mmScale - size / 2}px`;
+      element.style.top = `${py + (cx - x) * cal.flipV * mmScale - size / 2}px`;
+    };
+    for (const contact of contacts) {
+      if (contact.dead) continue;
+      // Friendlies are always shown; hostiles only while a radar sweep reveals them.
+      const dot = contact.friendly ? 'compassping_green_mp' : contact.revealed ? 'compassping_enemysatellite' : null;
+      if (dot) {
+        let element = this.dots[dotIndex];
+        if (!element) {
+          element = div('hud-minimap-dot', this.mapLayer);
+          this.dots[dotIndex] = element;
+        }
+        if (element.dataset.dot !== dot) {
+          element.style.backgroundImage = `url('${ART}${dot}.png')`;
+          element.dataset.dot = dot;
+        }
+        element.style.display = '';
+        place(element, MINIMAP_DOT_SIZE, contact.x, contact.z);
+        dotIndex += 1;
+        if (contact.friendly) friendly += 1; else revealed += 1;
+      }
+      const firedAt = this.firedAt.get(contact.id);
+      if (contact.friendly || firedAt === undefined) continue;
       const age = (now - firedAt) / 1000;
       if (age > FIRE_PING_SECONDS) continue;
       let ping = this.pings[pingIndex];
@@ -170,13 +223,12 @@ export class Hud {
       }
       ping.style.display = '';
       ping.style.opacity = (1 - age / FIRE_PING_SECONDS).toFixed(3);
-      ping.style.left = `${px + (enemy.z - z) * MAP_CAL.flipU * mmScale - MINIMAP_PING_SIZE / 2}px`;
-      ping.style.top = `${py + (enemy.x - x) * MAP_CAL.flipV * mmScale - MINIMAP_PING_SIZE / 2}px`;
+      place(ping, MINIMAP_PING_SIZE, contact.x, contact.z);
       pingIndex += 1;
     }
-    for (; pingIndex < this.pings.length; pingIndex += 1) {
-      this.pings[pingIndex].style.display = 'none';
-    }
+    for (; pingIndex < this.pings.length; pingIndex += 1) this.pings[pingIndex].style.display = 'none';
+    for (; dotIndex < this.dots.length; dotIndex += 1) this.dots[dotIndex].style.display = 'none';
+    this.counts = { contacts: contacts.length, revealed, friendly };
 
     if (weapon.magazine !== this.lastMag) {
       this.renderNumber(this.magDigits, weapon.magazine);

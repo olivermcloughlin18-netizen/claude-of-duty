@@ -192,3 +192,22 @@ test('frontend failure is terminal and reports its message', () => {
   frontend.progress('render', { loaded: 10, total: 10 });
   assert.equal(frontend.getState().percent, 50, 'progress stops once loading is over');
 });
+
+test('frontend setup screen picks a map and mode and hands them to onApplySetup', () => {
+  const applied = [];
+  const frontend = new Frontend({ onApplySetup: (choice) => { applied.push(choice); return true; } });
+  assert.ok(SCREENS.includes('setup'));
+  frontend.setSetup({ maps: [{ id: 'hijacked' }, { id: 'kestrel' }], modes: [{ id: 'ffa' }, { id: 'tdm' }], mapId: 'hijacked', modeId: 'ffa', name: 'ANON', online: false });
+  frontend.setReady();
+  assert.equal(frontend.openSetup(), true);
+  assert.equal(frontend.screen, 'setup');
+  frontend.chooseMap('kestrel');
+  frontend.chooseMode('tdm');
+  assert.deepEqual(frontend.getState().setup, { mapId: 'kestrel', modeId: 'tdm', name: 'ANON', online: false });
+  assert.ok(frontend.action('setup-apply'));
+  assert.equal(applied.length, 1);
+  assert.equal(applied[0].mapId, 'kestrel');
+  assert.equal(applied[0].modeId, 'tdm');
+  frontend.closeSetup();
+  assert.equal(frontend.screen, 'title');
+});
