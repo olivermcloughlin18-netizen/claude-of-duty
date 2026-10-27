@@ -24,7 +24,7 @@ jobs:
       - name: Stage runtime assets
         run: node .tools/stage_cloudflare.mjs
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: .work/cloudflare-pages
       - name: Publish game
