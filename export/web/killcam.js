@@ -99,6 +99,10 @@ const STYLE = `
 .kc-prog i{display:block;height:100%;width:100%;background:var(--fe-accent,#7fffc4);box-shadow:0 0 10px var(--fe-accent,#7fffc4);transform-origin:left;transform:scaleX(0)}
 .kc-fade{position:absolute;inset:0;background:#000;opacity:1}
 body.kc-on #hud,body.kc-on #hud-minimap,body.kc-on #hud-compass,body.kc-on #hud-ammo,body.kc-on #crosshair,
+body.kc-final #scoreboard{background:transparent;pointer-events:none}
+body.kc-final .scoreboard-panel{background:transparent;border-color:transparent;pointer-events:none}
+body.kc-final .scoreboard-panel>:not(#touch-restart){visibility:hidden}
+body.kc-final #touch-restart{pointer-events:auto;position:fixed;left:50%;bottom:3vh;transform:translateX(-50%)}
 body.kc-on #damage,body.kc-on #death-card,body.kc-on #match-status,body.kc-on #medals,body.kc-on #killfeed{opacity:0!important;visibility:hidden!important}
 `;
 
@@ -219,7 +223,7 @@ function begin(snap, kind) {
   play = {
     kind, snap, start, line, puppets, camera,
     real: 0, frames: 0, shotIndex: 0, lastContent: start,
-    baseFov: ctx.camera.fov, scoreboardWas: null,
+    baseFov: ctx.camera.fov,
   };
   killcam.camera = camera;
   return true;
@@ -229,8 +233,8 @@ function show() {
   play.frames = 1;
   ctx.enemies.setVisible(false);
   document.body.classList.add('kc-on');
-  const board = document.getElementById('scoreboard');
-  if (board && play.kind === 'final') { play.scoreboardWas = board.style.visibility; board.style.visibility = 'hidden'; }
+  // The scoreboard waits until the replay is over (the touch "Play again" button stays reachable).
+  document.body.classList.toggle('kc-final', play.kind === 'final');
   ui.root.classList.add('on');
   ui.label.replaceChildren(
     document.createTextNode(play.kind === 'final' ? 'Final killcam · ' : 'Killcam · '),
@@ -245,12 +249,11 @@ function show() {
 
 function end() {
   if (!play) return;
-  const { puppets, kind, scoreboardWas } = play;
+  const { puppets, kind } = play;
   for (const puppet of puppets.values()) puppet.dispose();
   ctx.enemies.setVisible(true);
   document.body.classList.remove('kc-on');
-  const board = document.getElementById('scoreboard');
-  if (board && scoreboardWas !== null) board.style.visibility = scoreboardWas;
+  document.body.classList.remove('kc-final');
   ui.root.classList.remove('on', 'shown');
   killcam.camera = null;
   play = null;
@@ -407,6 +410,12 @@ export const killcam = {
     if (!ctx) return;
     if (play) {
       if (play.kind === 'death' && !ctx.playerHealth.dead) return end();
+      // The killing blow ended the match: this replay is the final killcam.
+      if (play.kind === 'death' && ctx.match.phase === 'ended') {
+        play.kind = 'final';
+        finalHandled = true;
+        document.body.classList.add('kc-final');
+      }
       if (!play.frames) show();
       return playFrame(dt);
     }

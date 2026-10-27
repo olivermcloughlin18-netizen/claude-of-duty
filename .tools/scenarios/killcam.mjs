@@ -86,7 +86,7 @@ export async function run({ page, screenshot, artifactRoot, writeJson }) {
   await debug((api) => api.finishMatch());
   const final = await waitFor((s) => s.systems.killcam.playing && s.systems.killcam.kind === 'final', 60000, 100);
   await waitFor((s) => s.systems.killcam.seconds >= 1.5, 120000, 100);
-  const boardWhileFinal = await page.evaluate(() => getComputedStyle(document.getElementById('scoreboard')).visibility);
+  const boardWhileFinal = await page.evaluate(() => getComputedStyle(document.getElementById('scoreboard-rows')).visibility);
   await page.waitForTimeout(500);
   await screenshot('final-killcam');
   const finalEnded = await waitFor((s) => !s.systems.killcam.playing, 180000, 250);
@@ -94,7 +94,7 @@ export async function run({ page, screenshot, artifactRoot, writeJson }) {
   await page.waitForTimeout(3500); // summary count-up
   await screenshot('scoreboard-after');
   const board = await page.evaluate(() => ({
-    visibility: getComputedStyle(document.getElementById('scoreboard')).visibility,
+    visibility: getComputedStyle(document.getElementById('scoreboard-rows')).visibility,
     shown: document.getElementById('scoreboard').classList.contains('visible'),
     summary: !document.querySelector('.pg-summary')?.hidden,
     summaryText: document.querySelector('.pg-summary')?.innerText ?? '',
