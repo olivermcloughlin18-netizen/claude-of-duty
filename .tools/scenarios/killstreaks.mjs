@@ -106,7 +106,8 @@ export async function run({ page, screenshot, artifactRoot }) {
         if (jetShots < 2) { jetShots += 1; await screenshot(`jet${jetShots}`); }
       } else if (s.exploded >= 1) {
         if (exShots === 0) await debug((api, v) => api.lookAt([v.x, v.y + 90, v.z]), pair.spot);
-        if (exShots < 3) { exShots += 1; await screenshot(exShots === 2 ? 'explosion' : `explosion-${exShots}`); // the 2nd frame is the fireball peak }
+        // the 2nd frame is the fireball peak
+        if (exShots < 3) { exShots += 1; await screenshot(exShots === 2 ? 'explosion' : `explosion-${exShots}`); }
       }
       await page.waitForTimeout(80);
     }

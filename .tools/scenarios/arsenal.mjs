@@ -30,7 +30,7 @@ export async function run({ page, screenshot, openGame }) {
   await debug((api) => { api.setActive(true); api.resume(); });
   await page.waitForFunction(() => globalThis.hijacked.debug.getState().systems.loadout?.ready === true, null, { timeout: 60000 });
   await debug((api) => api.loadAllWeapons());
-  const canvas = await page.locator('canvas').boundingBox();
+  const canvas = await page.locator('canvas[data-engine]').boundingBox();
   await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
 
   // ---- 1. every weapon equips and fires

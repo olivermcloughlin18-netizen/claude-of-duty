@@ -103,7 +103,7 @@ export async function run({ page, screenshot, artifactRoot }) {
     await shotB('net-duel-b-aim');
 
     // A fires real bullets until the server reports the kill (re-aiming each pass against recoil).
-    const canvas = await page.locator('canvas').boundingBox();
+    const canvas = await page.locator('canvas[data-engine]').boundingBox();
     await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
     await page.bringToFront();
     const aim = () => page.evaluate(async () => {

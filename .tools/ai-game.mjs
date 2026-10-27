@@ -320,7 +320,7 @@ async function run() {
           });
         }
       });
-      const canvas = await page.locator('canvas').boundingBox();
+      const canvas = await page.locator('canvas[data-engine]').boundingBox();
       await page.mouse.move(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
       await page.mouse.down({ button: 'left' });
       await page.evaluate(() => new Promise((resolve) => {
