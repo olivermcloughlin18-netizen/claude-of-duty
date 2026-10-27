@@ -68,3 +68,6 @@
 
 !/FROYDINGER.md
 !/PLAN.md
+!/server/
+!/server/**
+/server/node_modules/
