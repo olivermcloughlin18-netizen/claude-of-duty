@@ -43,6 +43,9 @@ export function sampleAt(samples, at) {
 
 const MAX_QUEUED_CLAIMS = 8;
 
+/** Server weapon id -> event cause: the knife is melee, everything else a bullet. */
+const causeOf = (weaponId) => (weaponId === 'knife' ? 'melee' : 'bullet');
+
 /** The most one `hit` message may claim: damage x pellets, doubled for a headshot (what the server allows). */
 export const claimCap = (def, headshot) => (def ? def.damage * (def.pellets ?? 1) * (headshot ? 2 : 1) : Infinity);
 
@@ -194,7 +197,7 @@ export function createNetPlay({ createClient = createNetClient } = {}) {
     if (msg.attackerId !== selfId) {
       ctx.bus.emit(EVENTS.DAMAGE, {
         attackerId: toKey(msg.attackerId), victimId: toKey(msg.targetId), amount: msg.amount,
-        weaponId: msg.weaponId, cause: 'bullet', region: msg.headshot ? 'head' : 'torso',
+        weaponId: msg.weaponId, cause: causeOf(msg.weaponId), region: msg.headshot ? 'head' : 'torso',
       });
     }
   }
@@ -206,7 +209,7 @@ export function createNetPlay({ createClient = createNetClient } = {}) {
     const victimId = toKey(msg.victimId);
     const victimPosition = positionOf(msg.victimId) ?? [0, 0, 0];
     const event = ctx.recordKillEvent({
-      killerId, victimId, weaponId: msg.weaponId, cause: 'bullet', region: msg.headshot ? 'head' : 'torso',
+      killerId, victimId, weaponId: msg.weaponId, cause: causeOf(msg.weaponId), region: msg.headshot ? 'head' : 'torso',
       victimPosition, killerPosition: positionOf(msg.killerId), at: performance.now() / 1000,
     });
     const victim = peerOf(msg.victimId);

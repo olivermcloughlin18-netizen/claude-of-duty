@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/addons/utils/SkeletonUtils.js';
 import { createMuzzleFlashTexture } from './weapon-effects.js';
 import { parseNotetracks, NotetrackTimeline } from './notetracks.js';
+import { buildKnife } from './knife-model.js';
+import { knifePose, MELEE } from './melee.js';
 
 // The exported viewhands skeleton keeps the engine's view axes in tag_view's
 // local space: X forward (down the barrel), Y left, Z up. This basis maps that
@@ -156,7 +158,12 @@ export class Viewmodel {
     this.root.matrixAutoUpdate = false;
     this.swayGroup.add(this.root);
     this.adsGroup.add(this.swayGroup);
-    this.scene.add(this.adsGroup);
+    // meleeGroup drops the whole rifle out of view while the knife swings.
+    this.meleeGroup = new THREE.Group();
+    this.meleeGroup.add(this.adsGroup);
+    this.scene.add(this.meleeGroup);
+    this.knife = null; // built on the first swing
+    this.meleeTime = -1;
 
     this.ready = false;
     this.aiming = false;
@@ -717,7 +724,7 @@ export class Viewmodel {
 
   reload(empty = false) {
     const action = empty && this.reloadEmptyAction ? this.reloadEmptyAction : this.reloadAction;
-    if (!this.ready || !action || this.reloading) return false;
+    if (!this.ready || !action || this.reloading || this.meleeTime >= 0) return false;
     this.reloading = true;
     this.fireAction?.stop();
     this.adsFireAction?.stop();
@@ -791,8 +798,42 @@ export class Viewmodel {
     this.notetrackAction = null;
   }
 
+  /** Start the procedural knife swing (rifle drops, knife slashes). Cancels a reload. */
+  melee() {
+    if (!this.ready || this.meleeTime >= 0) return false;
+    this.cancelReload();
+    if (!this.knife) {
+      this.knife = buildKnife();
+      this.scene.add(this.knife);
+    }
+    this.meleeTime = 0;
+    return true;
+  }
+
+  get meleeing() { return this.meleeTime >= 0; }
+
+  cancelMelee() {
+    this.meleeTime = -1;
+    if (this.knife) this.knife.visible = false;
+    this.meleeGroup.position.set(0, 0, 0);
+    this.meleeGroup.rotation.set(0, 0, 0);
+  }
+
+  updateMelee(dt) {
+    if (this.meleeTime < 0) return;
+    this.meleeTime += dt;
+    const pose = knifePose(this.meleeTime);
+    if (this.meleeTime >= MELEE.recovery) this.meleeTime = -1;
+    this.knife.visible = pose.visible && this.meleeTime >= 0;
+    this.knife.position.fromArray(pose.p);
+    this.knife.rotation.set(pose.r[0], pose.r[1], pose.r[2], 'YXZ');
+    const lower = this.meleeTime >= 0 ? pose.lower : 0;
+    this.meleeGroup.position.set(3 * lower, -16 * lower, 2 * lower);
+    this.meleeGroup.rotation.set(-0.5 * lower, 0, 0.25 * lower);
+  }
+
   fire({ intro = false } = {}) {
-    if (!this.ready || this.reloading) return false;
+    if (!this.ready || this.reloading || this.meleeTime >= 0) return false;
     const aiming = this.aimBlend > 0.5;
     const action = intro
       ? (aiming && this.introAdsFireAction ? this.introAdsFireAction : this.introFireAction)
@@ -885,7 +926,8 @@ export class Viewmodel {
       dt,
     );
     // Reloading cancels the sight picture, as in the game.
-    this.aimBlend = damp(this.aimBlend, this.aiming && !this.reloading ? 1 : 0, 12, dt);
+    this.aimBlend = damp(this.aimBlend, this.aiming && !this.reloading && this.meleeTime < 0 ? 1 : 0, 12, dt);
+    this.updateMelee(dt);
     const sprint = this.sprintBlend;
 
     this.bobAmp = damp(this.bobAmp, movingGrounded ? speedFactor : 0, 8, dt);

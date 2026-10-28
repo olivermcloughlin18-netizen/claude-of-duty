@@ -868,7 +868,7 @@ test('Hijacked viewer loads collision, navigation, and walking controls', { time
     await page.mouse.up({ button: 'left' });
     assert.ok(inputShot.shots >= 1, 'held mouse trigger should fire through the real or explicit game tick');
     await page.keyboard.press('KeyN');
-    await page.keyboard.press('KeyV');
+    await page.keyboard.press('Shift+KeyV'); // V is the knife; collision view is Shift+V
     await page.keyboard.down('KeyW');
     await page.waitForTimeout(600);
     await page.keyboard.up('KeyW');

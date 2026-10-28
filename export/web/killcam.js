@@ -6,6 +6,8 @@
 // and recorded puppets are redrawn; nothing here advances bots or the clock.
 // Offline only.
 
+import { lookupWeapon } from './weapons.js';
+
 export const HZ = 20;
 export const KEEP_SECONDS = 8;
 export const REPLAY_SECONDS = 4; // real time, including the slow-motion hold
@@ -186,6 +188,7 @@ function snapshot(event) {
     killT: sample.t,
     killerId: event.killerId,
     victimId: event.victimId,
+    weaponName: lookupWeapon(event.weaponId)?.name ?? null,
     samples: rec.samples.slice(),
     shots: rec.shots.slice(),
   };
@@ -240,9 +243,10 @@ function show() {
     document.createTextNode(play.kind === 'final' ? 'Final killcam · ' : 'Killcam · '),
     Object.assign(el('b'), { textContent: nameOf(play.snap.killerId) }),
   );
+  const weaponTag = play.snap.weaponName ? ` · ${play.snap.weaponName}` : '';
   ui.sub.textContent = play.kind === 'final'
-    ? `${nameOf(play.snap.killerId)} ${play.snap.killerId === 'player' ? 'eliminate' : 'eliminates'} ${nameOf(play.snap.victimId)}`
-    : 'Replay from the shooter';
+    ? `${nameOf(play.snap.killerId)} ${play.snap.killerId === 'player' ? 'eliminate' : 'eliminates'} ${nameOf(play.snap.victimId)}${weaponTag}`
+    : `Replay from the shooter${weaponTag}`;
   ui.skip.classList.remove('on');
   requestAnimationFrame(() => ui.root.classList.add('shown'));
 }

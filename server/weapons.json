@@ -7,6 +7,11 @@
     "damage": 80,
     "rpm": 250
   },
+  "knife": {
+    "damage": 150,
+    "rpm": 108,
+    "maxRange": 120
+  },
   "m27": {
     "damage": 33,
     "rpm": 938

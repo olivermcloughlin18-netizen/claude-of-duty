@@ -22,17 +22,17 @@ The server does NOT know the map: clients choose their own spawn point on `match
 |---|---|---|
 | `join` | `room`: string 4-6 chars `[A-Za-z0-9]` or `null`; `name`: string; `map`: string `[a-z0-9_-]{1,24}` (optional) | `null` creates a room (reply code in `joined.room`). Case-insensitive code. Name is sanitized (control chars, `<>&"'` backtick, backslash stripped, max 16 chars; empty becomes `PlayerN`). One join per connection. `map` is stored only when the join creates the room (`room: null`); it is ignored for joiners and silently dropped if malformed. |
 | `state` | `pos`: `[n,n,n]`; `yaw`: n; `pitch`: n; `vel`: `[n,n,n]` (optional, default zeros); `weaponId`: string `[a-z0-9_]{1,16}` (optional); `crouch`: boolean (optional) | Send ~20 Hz. Accepted while dead too. Invalid state returns `error bad_message`. |
-| `hit` | `targetId`: string (player id); `weaponId`: string; `damage`: n; `headshot`: boolean; `shooterPos`: `[n,n,n]`; `targetPos`: `[n,n,n]` | One claim per bullet that struck. Replies only on rejection (`hit_rejected`); acceptance shows up as `damage`. |
+| `hit` | `targetId`: string (player id); `weaponId`: string; `damage`: n; `headshot`: boolean; `shooterPos`: `[n,n,n]`; `targetPos`: `[n,n,n]` | One claim per bullet that struck. Replies only on rejection (`hit_rejected`); acceptance shows up as `damage`. A knife swing is the same message with `weaponId: "knife"`, `damage` up to 150, `headshot: false` (see below). |
 | `shot` | `o`: `[n,n,n]` (muzzle/eye); `e`: `[n,n,n]` (impact or max-range end); `weaponId`: string `[a-z0-9_]{1,16}` | Cosmetic relay for remote tracers and fire pings; no damage. Relayed to the other players only, dropped silently when the shooter is dead, the match is not `playing`, or faster than 40 ms since the last relay. Malformed is `error bad_message`. Clients send at most ~11 Hz. |
 | `ping` | `c`: n (optional, echoed) | Replied with `pong`. |
 | `leave` | none | Server closes with 1000. |
 
 ### Hit validation (server order)
 1. Schema valid, else `error bad_message`.
-2. `reason` returned in `hit_rejected` for any of: `not_playing` (match phase not `playing`), `shooter_dead`, `unknown_target` (not in this room), `self_hit`, `target_dead`, `unknown_weapon`, `bad_damage` (`damage <= 0` or `> weapon.damage * (headshot ? 2 : 1)`), `fire_rate` (faster than 80% of the weapon's rpm interval), `no_position` (no `state` received yet for shooter or target), `position_mismatch` (`shooterPos`/`targetPos` more than 300 units from the last server-known position), `range` (shooter-target distance > 8000).
+2. `reason` returned in `hit_rejected` for any of: `not_playing` (match phase not `playing`), `shooter_dead`, `unknown_target` (not in this room), `self_hit`, `target_dead`, `unknown_weapon`, `bad_damage` (`damage <= 0` or `> weapon.damage * (headshot ? 2 : 1)`), `fire_rate` (faster than 80% of the weapon's rpm interval), `no_position` (no `state` received yet for shooter or target), `position_mismatch` (`shooterPos`/`targetPos` more than 300 units from the last server-known position), `range` (shooter-target distance > 8000, or > the weapon's own `maxRange`: 120 for the knife).
 3. Accepted: `damage` is applied as claimed (min'd to remaining hp).
 
-Weapon table: `weapons.json` beside `server.js`, generated from `export/web/weapons.js` by `node .tools/sync_server_weapons.mjs` (`{id: {damage, rpm}}`; `damage` = per-bullet damage x pellets, since a client sends one aggregated `hit` per target per frame; `rpm` = fastest fire mode x 1.25). Re-run the tool whenever weapons change; a test fails on drift. Headshot x2 max. Legs (x0.75) are legal: send the lower damage.
+Weapon table: `weapons.json` beside `server.js`, generated from `export/web/weapons.js` by `node .tools/sync_server_weapons.mjs` (`{id: {damage, rpm}}`; `damage` = per-bullet damage x pellets, since a client sends one aggregated `hit` per target per frame; `rpm` = fastest fire mode x 1.25). Re-run the tool whenever weapons change; a test fails on drift. Headshot x2 max (never for a melee weapon). Legs (x0.75) are legal: send the lower damage.
 
 ## Server -> client
 
@@ -62,3 +62,13 @@ Types: `Player = {id, name, kills, deaths, hp, alive, pos: [n,n,n]|null, yaw, pi
 - `ALLOWED_ORIGINS` set: upgrade without a listed `Origin` header is refused with HTTP 403.
 - No `join` within 10 s closes with 1008.
 - Reconnecting yields a NEW player id and zeroed score (no session resume in v1).
+
+## Melee (knife)
+
+`knife` is an ordinary entry in `weapons.json` (`damage: 150`, `rpm: 108`) with one extra field, `maxRange: 120`. Its presence marks the weapon as melee, which changes three checks in `hit` validation and nothing else:
+
+- `range`: `shooterPos` to `targetPos` must be at most `maxRange` (120 units, a little over the client's 72-unit reach so latency and the 100 ms puppet delay do not reject honest swings), instead of the global 8000.
+- `bad_damage`: the cap is `damage` (150, one-hit kill) with no headshot x2.
+- `fire_rate`: melee has its own clock (`lastMeleeAt`), so a swing right after a rifle hit is legal and does not delay the next bullet. Two swings closer than 80% of 60000/108 ms (about 445 ms) get `fire_rate`; the client recovery is 700 ms.
+
+Everything else is unchanged: the claim rides the normal client claim path (`net-play.js` `applyDamage` on the remote combatant), the server applies `min(damage, hp)`, broadcasts `damage` and `kill` with `weaponId: "knife"`, and clients render those as `cause: "melee"`. There is no new message type. A knife swing sends no `shot` relay (no tracer).

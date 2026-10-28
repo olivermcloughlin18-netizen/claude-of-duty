@@ -9,7 +9,7 @@ import { Combatants } from '../export/web/combatants.js';
 import { FreeForAllMatch } from '../export/web/free-for-all-match.js';
 import { PlayerHealth } from '../export/web/player-health.js';
 import { MAP_IDS } from '../export/web/maps.js';
-import { getWeapon } from '../export/web/weapons.js';
+import { lookupWeapon } from '../export/web/weapons.js';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const until = async (fn, ms = 3000) => {
@@ -97,7 +97,7 @@ function fakeCtx(name, notes = [], feet = [0, 0, 0]) {
         setPose() {}, setVisible() {}, dispose() { this.disposed = true; },
       }),
     },
-    weapons: { activeId: () => 'm27', definition: (id) => getWeapon(id) },
+    weapons: { activeId: () => 'm27', definition: (id) => lookupWeapon(id) },
     weaponEffects: { addTracer: (a, b) => shots.push([a, b]), playEnemyShot() {} },
     hud: { markFire() {} },
     overlay: { append() {} },
@@ -176,6 +176,38 @@ test('two clients: map echo, puppets, one aggregated claim, server-authoritative
     await until(() => a.getState().peers.length === 0);
     assert.equal(ca.combatants.get(`net-${bId}`), null);
     assert.equal(standing(ca, `net-${bId}`), undefined);
+  } finally {
+    clearInterval(pump);
+    a.disconnect();
+    b.disconnect();
+    await server.close();
+  }
+});
+
+test('online knife: a melee claim goes through the normal claim path and the server kills in one hit', async () => {
+  const server = createServer({ tickMs: 20, respawnMs: 200 });
+  const port = await server.listen(0);
+  const a = createNetPlay();
+  const b = createNetPlay();
+  let pump;
+  try {
+    assert.equal(await a.connect({ serverUrl: `ws://127.0.0.1:${port}`, room: 'NEW', name: 'Alpha', mapId: MAP_IDS[0] }), true);
+    assert.equal(await b.connect({ serverUrl: `ws://127.0.0.1:${port}`, room: a.getState().room, name: 'Bravo', mapId: MAP_IDS[0] }), true);
+    const ca = fakeCtx('a', [], [0, 0, 0]);
+    const cb = fakeCtx('b', [], [60, 0, 0]);
+    a.init(ca);
+    b.init(cb);
+    pump = setInterval(() => { a.update(0.016, {}); b.update(0.016, {}); }, 16);
+    const bId = b.getState().id;
+    await until(() => a.getState().peers[0]?.position?.[0] === 60 && a.getState().phase === 'playing');
+
+    const knife = { attackerId: 'player', weaponId: 'knife', cause: 'melee', region: 'torso' };
+    assert.equal(ca.combatants.applyDamage(`net-${bId}`, 150, knife), 100, 'predicted amount is clamped to the victim hp');
+    await until(() => cb.deaths.length === 1 && ca.kills.length === 1 && cb.kills.length === 1);
+    assert.equal(a.getState().rejected, 0, a.getState().lastReject);
+    assert.deepEqual([ca.kills[0].weaponId, ca.kills[0].cause], ['knife', 'melee']);
+    assert.deepEqual([cb.kills[0].weaponId, cb.kills[0].cause], ['knife', 'melee']);
+    assert.ok(ca.markers.includes('kill'));
   } finally {
     clearInterval(pump);
     a.disconnect();
