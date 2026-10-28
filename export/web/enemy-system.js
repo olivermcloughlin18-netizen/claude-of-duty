@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { enemyShotSpread, engagementPlan } from './enemy-tactics.js';
+import { coverReason, nextStrafeSide, pickFlankPoint, reactionDelay } from './bot-brain.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const MODEL_FORWARD_OFFSET = Math.PI / 2;
@@ -382,6 +383,7 @@ class Enemy {
     this.deathBlend = 0;
     this.playerVisible = false;
     this.detour = null;
+    this.resetTactics();
     this.spawnPoint = {
       position: spawn.position.clone(),
       authoredPosition: spawn.authoredPosition?.clone() ?? spawn.position.clone(),
@@ -508,6 +510,7 @@ class Enemy {
     this.movementSpeed = 0;
     this.deathBlend = 0;
     this.playerVisible = false;
+    this.resetTactics();
     this.modelRoot.position.y = 0;
     this.modelRoot.rotation.z = 0;
     this.playAction('idle', 0);
@@ -562,6 +565,7 @@ class Enemy {
     if (this.dead) return;
     this.dead = true;
     this.state = 'dead';
+    this.endTactic();
     this.lineOfFireClear = false;
     this.respawnTimer = this.manager.respawnDelay;
     if (this.agent) {
@@ -588,6 +592,93 @@ class Enemy {
     this.detour = point ?? null;
   }
 
+  resetTactics() {
+    // tactic: null | 'engage' | 'strafe' | 'cover' | 'flank' | 'melee' (observable via hijacked.enemies).
+    this.tactic = null;
+    this.tacticTimer = 0;
+    this.tacticPoint = null;
+    this.coverCooldown = 0;
+    this.flankCooldown = 0;
+    this.strafeTimer = 0;
+    this.strafeSide = this.index % 2 ? 1 : -1;
+    this.meleeWilling = false;
+    this.meleeRolled = false;
+    this.meleeCooldown = 0;
+    this.decisionCount = 0;
+  }
+
+  endTactic() {
+    // The slot kept while hiding is stale once the bot re-peeks.
+    if (this.tactic === 'cover') this.combatTarget = null;
+    this.tactic = null;
+    this.tacticTimer = 0;
+    this.tacticPoint = null;
+  }
+
+  beginCover(reason) {
+    const point = this.manager.findCoverPoint(this);
+    if (!point) { this.coverCooldown = 1.5; return false; }
+    this.tactic = 'cover';
+    this.tacticPoint = point;
+    this.tacticTimer = reason === 'reload' ? Math.max(1.2, this.reloadTimer + 0.5) : 2.2 + Math.random() * 1.3;
+    this.coverCooldown = this.tacticTimer + 4;
+    this.agent?.requestMoveTarget(point);
+    return true;
+  }
+
+  beginFlank() {
+    const point = this.manager.findFlankPoint(this);
+    if (!point) { this.flankCooldown = 3; return false; }
+    this.tactic = 'flank';
+    this.tacticPoint = point;
+    this.tacticTimer = 6;
+    this.flankCooldown = 14;
+    this.agent?.requestMoveTarget(point);
+    return true;
+  }
+
+  /** One strafe leg every ~0.7 s: sideways to the target, only along walkable navmesh, with the odd counter-strafe pause. */
+  strafe() {
+    if (this.strafeTimer > 0) return;
+    const target = this.manager.targetFeet(this.currentTarget, _friendCenter);
+    _direction.set(target.x - this.root.position.x, 0, target.z - this.root.position.z);
+    if (_direction.lengthSq() < 1) return;
+    _direction.normalize();
+    this.strafeSide = nextStrafeSide(this.strafeSide, false, Math.random());
+    if (Math.random() < 0.2) {
+      this.strafeTimer = 0.3 + Math.random() * 0.4;
+      this.tactic = 'engage';
+      this.combatTarget ??= this.root.position.clone(); // holding here
+      this.agent?.resetMoveTarget();
+      return;
+    }
+    const length = 120 + Math.random() * 90;
+    // Sideways first, then the other side; in a corridor both are walls, so last try along the line to the target.
+    const along = Math.random() < 0.5 ? 1 : -1;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if (attempt < 2) {
+        _target.set(this.root.position.x - _direction.z * this.strafeSide * length, this.root.position.y,
+          this.root.position.z + _direction.x * this.strafeSide * length);
+      } else {
+        _target.set(this.root.position.x + _direction.x * along * length, this.root.position.y,
+          this.root.position.z + _direction.z * along * length);
+      }
+      const moved = this.manager.navigation.constrainMovement(this.root.position, _target);
+      if (moved.success && planarDistance(moved.position, this.root.position) > length * 0.6) {
+        this.agent?.requestMoveTarget(moved.position);
+        this.combatTarget = moved.position; // where this bot is heading for the fight (debug state + squad spacing)
+        this.tactic = 'strafe';
+        this.strafeTimer = 0.6 + Math.random() * 0.5;
+        return;
+      }
+      if (attempt < 2) this.strafeSide = -this.strafeSide;
+    }
+    this.tactic = 'engage';
+    this.strafeTimer = 0.4;
+    this.combatTarget ??= this.root.position.clone();
+    this.agent?.resetMoveTarget();
+  }
+
   choosePatrolTarget() {
     this.patrolTarget = this.manager.findPatrolPoint(this.root.position);
     if (this.patrolTarget) this.agent?.requestMoveTarget(this.patrolTarget);
@@ -611,8 +702,12 @@ class Enemy {
     const alreadyAlerted = this.engaged || this.lastSeenTimer > 0 ||
       ['chase', 'attack', 'reposition', 'search'].includes(this.state);
     const wasVisible = this.playerVisible;
-    const acquired = this.manager.selectTarget(this, alreadyAlerted ? -0.2 : this.manager.visionCosine);
-    if (acquired) this.currentTarget = acquired;
+    // Re-scanning every hostile costs a raycast each; a bot already fighting a visible target only re-scans every 3rd tick.
+    this.decisionCount += 1;
+    if (!this.currentTarget || !wasVisible || this.decisionCount % 3 === 0) {
+      const acquired = this.manager.selectTarget(this, alreadyAlerted ? -0.2 : this.manager.visionCosine);
+      if (acquired) this.currentTarget = acquired;
+    }
     const visible = Boolean(this.currentTarget &&
       this.manager.canSeeTarget(this, this.currentTarget, alreadyAlerted ? -0.2 : this.manager.visionCosine));
     this.playerVisible = visible;
@@ -623,8 +718,10 @@ class Enemy {
         // following frames. Reacquisition therefore starts imprecise even
         // when this bot still remembers the target's last position.
         this.aimConvergence = 0;
-        this.reactionTimer = this.manager.reactionTimeMin + Math.random() *
-          (this.manager.reactionTimeMax - this.manager.reactionTimeMin);
+        this.reactionTimer = reactionDelay(
+          this.root.position.distanceTo(this.manager.targetPosition(this.currentTarget, _point)),
+          this.manager.targetSpeed(this.currentTarget), Math.random(),
+          { min: this.manager.reactionTimeMin, max: this.manager.reactionTimeMax });
       }
       const targetPosition = this.manager.targetPosition(this.currentTarget);
       const targetFeet = this.manager.targetFeet(this.currentTarget);
@@ -635,7 +732,30 @@ class Enemy {
       this.searchTimer = 0;
       this.searchTarget = null;
       this.lineOfFireClear = !this.manager.hasFriendlyLineBlock(this);
-      if (distance <= this.manager.attackRange) {
+      if (this.tactic === 'flank') this.endTactic();
+      if (this.tactic !== 'cover' && distance <= this.manager.attackRange) {
+        const reason = coverReason({
+          health: this.health, maxHealth: this.maxHealth, reloading: this.reloadTimer > 0,
+          visibleHostiles: this.manager.countThreats(this), cooldown: this.coverCooldown, roll: Math.random(),
+        });
+        if (reason) this.beginCover(reason);
+      }
+      const planar = planarDistance(this.root.position, targetFeet);
+      if (planar > 110) this.meleeRolled = false;
+      else if (!this.meleeRolled) { this.meleeRolled = true; this.meleeWilling = Math.random() < 0.8; }
+      if (this.tactic === 'cover') {
+        // Hold the move to cover; keep facing and shooting if the target is still in view on the way.
+        this.state = 'reposition';
+        if (planarDistance(this.root.position, this.tacticPoint) < 40) this.tacticTimer = Math.min(this.tacticTimer, 0.6);
+      } else if (this.meleeWilling && planar <= 110 && Math.abs(targetFeet.y - this.root.position.y) < 40) {
+        this.state = 'attack';
+        this.tactic = 'melee';
+        this.combatTarget = null;
+        const projected = this.manager.navigation.projectPoint(targetFeet);
+        if (projected.success && projected.point) this.agent?.requestMoveTarget(projected.point);
+      } else if (distance <= this.manager.attackRange) {
+        if (this.tactic === 'melee') this.endTactic();
+        const wasRepositioning = this.state === 'reposition';
         const targetPending = this.combatTarget &&
           planarDistance(this.root.position, this.combatTarget) >= 70;
         const shouldReposition = distance < this.manager.minAttackRange ||
@@ -643,17 +763,18 @@ class Enemy {
           (this.state === 'reposition' && targetPending) || this.combatTargetTimer <= 0;
         if (shouldReposition) {
           this.state = 'reposition';
-          if (!targetPending || this.combatTargetTimer <= 0 ||
+          if (!wasRepositioning || !targetPending || this.combatTargetTimer <= 0 ||
               planarDistance(this.root.position, this.combatTarget) < 70) {
             this.chooseCombatTarget();
           }
+          this.tactic = 'engage';
         } else {
           this.state = 'attack';
-          this.combatTarget = null;
-          this.agent?.resetMoveTarget();
+          this.strafe();
         }
       } else {
         this.state = 'chase';
+        this.tactic = null;
         this.combatTarget = null;
         const projected = this.manager.navigation.projectPoint(targetFeet);
         if (projected.success && projected.point) this.agent?.requestMoveTarget(projected.point);
@@ -661,10 +782,24 @@ class Enemy {
       return;
     }
 
+    if (this.tactic === 'cover' && this.tacticTimer > 0) {
+      // Out of sight on purpose: hold the cover spot until the timer says re-peek.
+      this.lineOfFireClear = false;
+      this.state = 'chase';
+      return;
+    }
     if (this.lastSeenTimer > 0) {
       this.lineOfFireClear = false;
       this.state = 'chase';
       this.combatTarget = null;
+      if (this.tactic === 'flank' && this.tacticTimer > 0) {
+        if (planarDistance(this.root.position, this.tacticPoint) >= 70) return;
+        this.endTactic();
+      } else if (this.tactic !== 'flank' && this.flankCooldown <= 0 &&
+          planarDistance(this.root.position, this.lastSeen) > 300) {
+        if (Math.random() < 0.85 && this.beginFlank()) return;
+        this.flankCooldown = 4;
+      }
       const projected = this.manager.navigation.projectPoint(this.lastSeen);
       if (projected.success && projected.point) this.agent?.requestMoveTarget(projected.point);
       return;
@@ -710,14 +845,23 @@ class Enemy {
     this.burstPauseTimer = Math.max(0, this.burstPauseTimer - dt);
     this.reloadTimer = Math.max(0, this.reloadTimer - dt);
     this.suppressionTimer = Math.max(0, this.suppressionTimer - dt);
+    this.meleeCooldown = Math.max(0, this.meleeCooldown - dt);
     this.aimConvergence = this.playerVisible
       ? Math.min(1, this.aimConvergence + dt / this.manager.aimConvergeTime)
       : Math.max(0, this.aimConvergence - dt / this.manager.aimConvergeTime);
     if (wasReloading && this.reloadTimer === 0) this.magazine = this.manager.enemyMagazineSize;
 
     const combatState = this.state === 'attack' || this.state === 'reposition';
-    if (!combatState || !this.playerVisible || this.manager.targetDead(this.currentTarget) ||
-        this.reactionTimer > 0 || this.reloadTimer > 0 || this.burstPauseTimer > 0) return;
+    if (!combatState || !this.playerVisible || this.manager.targetDead(this.currentTarget)) return;
+    // Point-blank: knife instead of shooting (works mid-reload, still waits out the reaction delay).
+    if (this.tactic === 'melee' && this.reactionTimer === 0 && this.meleeCooldown === 0 &&
+        this.manager.inMeleeRange(this)) {
+      this.manager.enemyMelee(this);
+      this.meleeCooldown = 1.2;
+      this.fireTimer = Math.max(this.fireTimer, 0.5);
+      return;
+    }
+    if (this.reactionTimer > 0 || this.reloadTimer > 0 || this.burstPauseTimer > 0) return;
 
     if (this.magazine <= 0) {
       this.reloadTimer = this.manager.enemyReloadTime * (0.9 + Math.random() * 0.2);
@@ -784,15 +928,26 @@ class Enemy {
     if (!active) return;
     this.lastSeenTimer = Math.max(0, this.lastSeenTimer - dt);
     this.combatTargetTimer = Math.max(0, this.combatTargetTimer - dt);
+    this.coverCooldown = Math.max(0, this.coverCooldown - dt);
+    this.flankCooldown = Math.max(0, this.flankCooldown - dt);
+    this.strafeTimer = Math.max(0, this.strafeTimer - dt);
+    if (this.tacticTimer > 0) {
+      this.tacticTimer -= dt;
+      if (this.tacticTimer <= 0 && (this.tactic === 'cover' || this.tactic === 'flank')) this.endTactic();
+    }
     if (this.state === 'search') this.searchTimer = Math.max(0, this.searchTimer - dt);
     this.decisionTimer -= dt;
     if (this.decisionTimer <= 0) {
       // Full-map collision raycasts are deliberately staggered and cached.
       // Rechecking six actors several times per frame causes input-blocking
       // spikes when enemies gather around walls or doorways.
-      this.decisionTimer += 0.36 + Math.random() * 0.1;
+      this.decisionTimer += 0.26 + Math.random() * 0.08;
       this.decide();
     }
+
+    // Strafe legs chain on their own timer so a bot doesn't stand still waiting for the next decision tick.
+    if (this.playerVisible && this.strafeTimer <= 0 && this.currentTarget &&
+        (this.state === 'attack' || (this.state === 'reposition' && !this.combatTarget && this.tactic !== 'cover'))) this.strafe();
 
     const horizontalSpeed = Math.hypot(_velocity.x, _velocity.z);
     this.movementSpeed = horizontalSpeed;
@@ -805,9 +960,7 @@ class Enemy {
         this.root.rotation.y = dampAngle(this.root.rotation.y, targetYaw, 10, dt);
       }
     }
-    if (this.state === 'attack') {
-      this.playAction('idle');
-    } else if (horizontalSpeed > 10) {
+    if (horizontalSpeed > 10) {
       if (!combatFacing) {
         const targetYaw = Math.atan2(-_velocity.x, -_velocity.z);
         this.root.rotation.y = dampAngle(this.root.rotation.y, targetYaw, 9, dt);
@@ -856,8 +1009,8 @@ export class EnemyManager {
     burstPauseMax = 1.85,
     enemyMagazineSize = 24,
     enemyReloadTime = 2.4,
-    reactionTimeMin = 0.35,
-    reactionTimeMax = 0.95,
+    reactionTimeMin = 0.2,
+    reactionTimeMax = 0.45,
     aimConvergeTime = 2,
     friendlyFireRadius = 25,
     combatSpacing = 105,
@@ -1164,6 +1317,8 @@ export class EnemyManager {
       suppressed: enemy.suppressionTimer > 0,
       aimConvergence: enemy.aimConvergence,
     });
+    // Aim at the middle of the hit sphere (feet + 39) so a wider spread can only make a shot worse.
+    _target.set(feet.x, feet.y + 39, feet.z);
     _target.x += (Math.random() - 0.5) * spread;
     _target.y += (Math.random() - 0.5) * spread;
     _target.z += (Math.random() - 0.5) * spread;
@@ -1228,6 +1383,89 @@ export class EnemyManager {
           _friendClosest.distanceToSquared(_friendCenter) < radiusSquared) return true;
     }
     return false;
+  }
+
+  targetSpeed(target) {
+    if (!target) return 0;
+    return target === this.player
+      ? Math.hypot(this.player.velocity?.x ?? 0, this.player.velocity?.z ?? 0)
+      : target.movementSpeed;
+  }
+
+  /** Hostiles currently looking at this bot (its own target counts as one); cheap, no raycasts. */
+  countThreats(enemy) {
+    let count = enemy.playerVisible ? 1 : 0;
+    for (const other of this.enemies) {
+      if (other !== enemy && other !== enemy.currentTarget && !other.dead && other.playerVisible &&
+          other.currentTarget === enemy && this.isHostile(other, enemy)) count += 1;
+    }
+    return count;
+  }
+
+  inMeleeRange(enemy) {
+    const target = enemy.currentTarget ?? this.player;
+    this.targetFeet(target, _friendCenter);
+    return planarDistance(enemy.root.position, _friendCenter) <= 60 &&
+      Math.abs(_friendCenter.y - enemy.root.position.y) < 40;
+  }
+
+  // Knife: goes through the same applyDamage hook as bullets. index.html's hook currently ignores the 4th
+  // argument (HOOK REQUEST in the lane report) and records weaponId 'bot'/cause 'bullet'.
+  enemyMelee(enemy) {
+    const target = enemy.currentTarget ?? this.player;
+    if (this.targetDead(target)) return 0;
+    return this.applyDamage(target, 150, enemy, { weaponId: 'knife', cause: 'melee', region: 'torso' });
+  }
+
+  /** A nearby navmesh spot with no line of sight to the bot's target, reachable without detouring toward it. */
+  findCoverPoint(enemy) {
+    const threat = this.targetPosition(enemy.currentTarget ?? this.player, new THREE.Vector3());
+    const from = enemy.root.position;
+    const away = new THREE.Vector3(from.x - threat.x, 0, from.z - threat.z);
+    if (away.lengthSq() < 1) away.set(1, 0, 0); else away.normalize();
+    const rayOrigin = new THREE.Vector3();
+    const rayDirection = new THREE.Vector3();
+    for (const radius of [130, 210, 300, 420]) {
+      for (const angle of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8, 2.4, -2.4]) {
+        const cos = Math.cos(angle); const sin = Math.sin(angle);
+        const candidate = new THREE.Vector3(
+          from.x + (away.x * cos - away.z * sin) * radius, from.y,
+          from.z + (away.x * sin + away.z * cos) * radius);
+        const projected = this.navigation.projectPoint(candidate);
+        if (!projected.success || !projected.point || planarDistance(projected.point, candidate) > 40) continue;
+        // Hidden only if the centre and both shoulders (16u either side) are blocked, from standing eye height.
+        let exposed = false;
+        for (const shoulder of [0, 16, -16]) {
+          rayOrigin.set(projected.point.x - away.z * shoulder, projected.point.y + 61, projected.point.z + away.x * shoulder);
+          rayDirection.subVectors(threat, rayOrigin);
+          const length = rayDirection.length();
+          rayDirection.multiplyScalar(1 / length);
+          this.raycaster.ray.set(rayOrigin, rayDirection);
+          const wall = this.collisionWorld.raycastFirst(this.raycaster.ray, 2, length);
+          if (!wall || wall.distance >= length - 4) { exposed = true; break; }
+        }
+        if (exposed) continue;
+        const route = this.navigation.findPath(from, projected.point);
+        if (!route.success || route.path.length < 2) continue;
+        let routeLength = 0;
+        for (let i = 1; i < route.path.length; i += 1) routeLength += route.path[i].distanceTo(route.path[i - 1]);
+        if (routeLength > radius * 1.4 + 60) continue;
+        return projected.point;
+      }
+    }
+    return null;
+  }
+
+  /** Waypoint to approach the last-seen position from the side; squadmates take opposite sides and different points. */
+  findFlankPoint(enemy) {
+    const avoid = [];
+    for (const other of this.enemies) {
+      if (other !== enemy && !other.dead && other.tactic === 'flank' && other.tacticPoint) avoid.push(other.tacticPoint);
+    }
+    const side = enemy.index % 2 ? 1 : -1;
+    const point = pickFlankPoint(this.patrolPoints, enemy.root.position, enemy.lastSeen, side, avoid) ??
+      pickFlankPoint(this.patrolPoints, enemy.root.position, enemy.lastSeen, -side, avoid);
+    return point ? point.clone() : null;
   }
 
   isCombatCrowded(candidate) {
