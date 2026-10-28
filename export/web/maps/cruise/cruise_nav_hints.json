@@ -1,0 +1,1342 @@
+{
+ "format": "claude-of-duty-nav-hints-v1",
+ "map": "cruise",
+ "coordinateSystem": {
+  "target": "Three.js y-up",
+  "spawnYaw": "yaw is Object3D rotation.y radians; forward = (-sin yaw, 0, -cos yaw)"
+ },
+ "pathnodes": [
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -3400,
+    0,
+    -300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -3400,
+    0,
+    300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -3250,
+    0,
+    480
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -3250,
+    0,
+    -480
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2950,
+    0,
+    -600
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2950,
+    0,
+    600
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2900,
+    168,
+    -400
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2900,
+    168,
+    400
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -650,
+    168,
+    -700
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    0,
+    -620
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    0,
+    620
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    650,
+    168,
+    700
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    3350,
+    0,
+    -120
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    3350,
+    0,
+    120
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2900,
+    0,
+    -500
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2900,
+    0,
+    500
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2500,
+    0,
+    -250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1950,
+    168,
+    -250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1950,
+    168,
+    250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -3200,
+    0,
+    -450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -3200,
+    0,
+    450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2900,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2650,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2250,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1950,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2650,
+    0,
+    -360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2650,
+    0,
+    360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2250,
+    0,
+    -360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2250,
+    0,
+    360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1950,
+    0,
+    -360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1950,
+    0,
+    360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2250,
+    0,
+    -180
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2250,
+    0,
+    180
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2400,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2400,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1600,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1600,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -800,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -800,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    800,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    800,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1600,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1600,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2100,
+    0,
+    -810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2100,
+    0,
+    810
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1500,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1450,
+    0,
+    -365
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1450,
+    0,
+    365
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1060,
+    0,
+    -550
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1060,
+    0,
+    550
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -750,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -750,
+    0,
+    -450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -750,
+    0,
+    450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -300,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    300,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    0,
+    -250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    0,
+    250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    700,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    700,
+    0,
+    -450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    700,
+    0,
+    450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1100,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1300,
+    0,
+    -400
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1300,
+    0,
+    400
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1500,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1600,
+    0,
+    -560
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1600,
+    0,
+    560
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1825,
+    0,
+    -360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1825,
+    0,
+    360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1825,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2175,
+    0,
+    -360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2175,
+    0,
+    360
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2175,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    0,
+    -180
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    0,
+    180
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2500,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2700,
+    0,
+    -300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2700,
+    0,
+    300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    3100,
+    0,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    3100,
+    0,
+    -400
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    3100,
+    0,
+    400
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2750,
+    0,
+    -780
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2750,
+    0,
+    780
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2500,
+    168,
+    -300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2500,
+    168,
+    300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2300,
+    168,
+    -700
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -2300,
+    168,
+    700
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1850,
+    168,
+    -600
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1850,
+    168,
+    600
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1450,
+    168,
+    -300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1450,
+    168,
+    300
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1450,
+    168,
+    -520
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1450,
+    168,
+    520
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1000,
+    168,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1000,
+    168,
+    -650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -1000,
+    168,
+    650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -500,
+    168,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    500,
+    168,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    168,
+    -650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    0,
+    168,
+    650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -700,
+    168,
+    -450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    -700,
+    168,
+    450
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1000,
+    168,
+    -700
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1000,
+    168,
+    700
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    960,
+    168,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1450,
+    168,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1500,
+    168,
+    -650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1500,
+    168,
+    650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1900,
+    168,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    168,
+    -250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    168,
+    250
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2280,
+    168,
+    -740
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2280,
+    168,
+    740
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1200,
+    168,
+    -850
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1200,
+    168,
+    850
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1450,
+    336,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1450,
+    336,
+    -350
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1450,
+    336,
+    350
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1100,
+    336,
+    -420
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1100,
+    336,
+    420
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    1500,
+    336,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2100,
+    336,
+    0
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    336,
+    -140
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2000,
+    336,
+    140
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2150,
+    336,
+    -650
+   ]
+  },
+  {
+   "classname": "node_pathnode",
+   "position": [
+    2150,
+    336,
+    650
+   ]
+  }
+ ],
+ "negotiationNodes": [],
+ "offMeshConnections": [],
+ "spawns": [
+  {
+   "ordinal": 0,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -3400,
+    0,
+    -300
+   ],
+   "positionObject": {
+    "x": -3400,
+    "y": 0,
+    "z": -300
+   },
+   "yaw": -1.6263
+  },
+  {
+   "ordinal": 1,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -3400,
+    0,
+    300
+   ],
+   "positionObject": {
+    "x": -3400,
+    "y": 0,
+    "z": 300
+   },
+   "yaw": -1.5153
+  },
+  {
+   "ordinal": 2,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -3250,
+    0,
+    480
+   ],
+   "positionObject": {
+    "x": -3250,
+    "y": 0,
+    "z": 480
+   },
+   "yaw": -1.4796
+  },
+  {
+   "ordinal": 3,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -3250,
+    0,
+    -480
+   ],
+   "positionObject": {
+    "x": -3250,
+    "y": 0,
+    "z": -480
+   },
+   "yaw": -1.662
+  },
+  {
+   "ordinal": 4,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -2950,
+    0,
+    -600
+   ],
+   "positionObject": {
+    "x": -2950,
+    "y": 0,
+    "z": -600
+   },
+   "yaw": -1.6914
+  },
+  {
+   "ordinal": 5,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -2950,
+    0,
+    600
+   ],
+   "positionObject": {
+    "x": -2950,
+    "y": 0,
+    "z": 600
+   },
+   "yaw": -1.4502
+  },
+  {
+   "ordinal": 6,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -2900,
+    168,
+    -400
+   ],
+   "positionObject": {
+    "x": -2900,
+    "y": 168,
+    "z": -400
+   },
+   "yaw": -1.6522
+  },
+  {
+   "ordinal": 7,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -2900,
+    168,
+    400
+   ],
+   "positionObject": {
+    "x": -2900,
+    "y": 168,
+    "z": 400
+   },
+   "yaw": -1.4893
+  },
+  {
+   "ordinal": 8,
+   "classname": "mp_dm_spawn",
+   "position": [
+    -650,
+    168,
+    -700
+   ],
+   "positionObject": {
+    "x": -650,
+    "y": 168,
+    "z": -700
+   },
+   "yaw": -2.1588
+  },
+  {
+   "ordinal": 9,
+   "classname": "mp_dm_spawn",
+   "position": [
+    0,
+    0,
+    -620
+   ],
+   "positionObject": {
+    "x": 0,
+    "y": 0,
+    "z": -620
+   },
+   "yaw": 2.5686
+  },
+  {
+   "ordinal": 10,
+   "classname": "mp_dm_spawn",
+   "position": [
+    0,
+    0,
+    620
+   ],
+   "positionObject": {
+    "x": 0,
+    "y": 0,
+    "z": 620
+   },
+   "yaw": 0.573
+  },
+  {
+   "ordinal": 11,
+   "classname": "mp_dm_spawn",
+   "position": [
+    650,
+    168,
+    700
+   ],
+   "positionObject": {
+    "x": 650,
+    "y": 168,
+    "z": 700
+   },
+   "yaw": 0.9828
+  },
+  {
+   "ordinal": 12,
+   "classname": "mp_dm_spawn",
+   "position": [
+    3350,
+    0,
+    -120
+   ],
+   "positionObject": {
+    "x": 3350,
+    "y": 0,
+    "z": -120
+   },
+   "yaw": 1.5932
+  },
+  {
+   "ordinal": 13,
+   "classname": "mp_dm_spawn",
+   "position": [
+    3350,
+    0,
+    120
+   ],
+   "positionObject": {
+    "x": 3350,
+    "y": 0,
+    "z": 120
+   },
+   "yaw": 1.5484
+  },
+  {
+   "ordinal": 14,
+   "classname": "mp_dm_spawn",
+   "position": [
+    2900,
+    0,
+    -500
+   ],
+   "positionObject": {
+    "x": 2900,
+    "y": 0,
+    "z": -500
+   },
+   "yaw": 1.6725
+  },
+  {
+   "ordinal": 15,
+   "classname": "mp_dm_spawn",
+   "position": [
+    2900,
+    0,
+    500
+   ],
+   "positionObject": {
+    "x": 2900,
+    "y": 0,
+    "z": 500
+   },
+   "yaw": 1.4691
+  },
+  {
+   "ordinal": 16,
+   "classname": "mp_dm_spawn",
+   "position": [
+    2500,
+    0,
+    -250
+   ],
+   "positionObject": {
+    "x": 2500,
+    "y": 0,
+    "z": -250
+   },
+   "yaw": 1.6263
+  },
+  {
+   "ordinal": 17,
+   "classname": "mp_dm_spawn",
+   "position": [
+    1950,
+    168,
+    -250
+   ],
+   "positionObject": {
+    "x": 1950,
+    "y": 168,
+    "z": -250
+   },
+   "yaw": 1.634
+  },
+  {
+   "ordinal": 18,
+   "classname": "mp_dm_spawn",
+   "position": [
+    1950,
+    168,
+    250
+   ],
+   "positionObject": {
+    "x": 1950,
+    "y": 168,
+    "z": 250
+   },
+   "yaw": 1.5076
+  },
+  {
+   "ordinal": 19,
+   "classname": "mp_dm_spawn",
+   "position": [
+    2000,
+    0,
+    0
+   ],
+   "positionObject": {
+    "x": 2000,
+    "y": 0,
+    "z": 0
+   },
+   "yaw": 1.5708
+  }
+ ],
+ "counts": {
+  "pathnodes": 128,
+  "spawns": 20
+ }
+}

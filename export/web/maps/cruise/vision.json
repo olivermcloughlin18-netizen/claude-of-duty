@@ -1,0 +1,15 @@
+{
+ "highlight": [
+  0.17,
+  0.158,
+  0.14
+ ],
+ "lowlight": [
+  0.04,
+  0.043,
+  0.05
+ ],
+ "exposure": 1.2,
+ "lowlightScale": 1,
+ "note": "Same schema as export/web/vision.json; only highlight/lowlight/exposure are read."
+}

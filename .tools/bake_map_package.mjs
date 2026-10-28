@@ -12,6 +12,8 @@ if (!id) throw new Error('usage: bake_map_package.mjs <id>');
 const src = path.join(root, '.work', 'maps', id);
 const out = path.join(root, 'export', 'web', 'maps', id);
 fs.mkdirSync(out, { recursive: true });
+const msrc = JSON.parse(fs.readFileSync(`${src}/manifest.src.json`, 'utf8'));
+const ambient = (msrc.lighting?.probeAmbient ?? [0.12, 0.09, 0.2]).join(',');
 const run = (script, args) => {
   const r = spawnSync('node', [path.join(root, '.tools', script), ...args], { cwd: root, stdio: 'inherit' });
   if (r.status !== 0) throw new Error(`${script} failed`);
@@ -20,7 +22,7 @@ run('bake_map.mjs', ['--source', `${src}/map.glb`, '--output', `${out}/${id}_opt
 run('bake_collision_bvh.mjs', ['--input', `${src}/collision.gltf`, '--output', `${out}/${id}_collision_bvh.bin`]);
 run('bake_navmesh.mjs', ['--input', `${src}/collision.gltf`, '--output', `${out}/${id}.navmesh.bin`]);
 run('bake_probes.mjs', ['--collision', `${src}/collision.gltf`, '--env', `${src}/env`, '--out', `${out}/${id}_probes`,
-  '--spacing', '80', '--rays', '96', '--emitters', `${src}/emitters.json`, '--ambient', '0.12,0.09,0.2']);
+  '--spacing', '80', '--rays', '96', '--emitters', `${src}/emitters.json`, '--ambient', ambient]);
 for (const d of ['env', 'probe']) fs.cpSync(path.join(src, d), path.join(out, 'textures', d), { recursive: true });
 fs.copyFileSync(`${src}/lut.png`, `${out}/textures/lut.png`);
 for (const [from, to] of [['vision.json', 'vision.json'], ['minimap.png', 'minimap.png'], ['nav_hints.json', `${id}_nav_hints.json`], ['ladders.json', `${id}_ladders.json`]]) {
@@ -33,6 +35,7 @@ m.files = {
   navHints: `${id}_nav_hints.json`, ladders: `${id}_ladders.json`, probes: `${id}_probes.json`,
   vision: 'vision.json', lut: 'textures/lut.png', env: 'textures/env/', probe: 'textures/probe/', minimap: 'minimap.png',
 };
+if (fs.existsSync(`${out}/card.jpg`)) m.files.card = 'card.jpg';
 m.lighting.paths = { env: 'textures/env/', probe: 'textures/probe/', vision: 'vision.json', lut: 'textures/lut.png' };
 fs.writeFileSync(path.join(out, 'manifest.json'), `${JSON.stringify(m, null, 2)}\n`);
 let total = 0;
