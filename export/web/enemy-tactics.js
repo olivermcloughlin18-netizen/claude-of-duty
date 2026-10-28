@@ -20,7 +20,7 @@ export function enemyShotSpread(distance, {
   const targetMovement = Math.max(0, Number(playerSpeed) || 0);
   const ownMovement = Math.max(0, Number(shooterSpeed) || 0);
   const convergence = Math.max(0, Math.min(1, Number(aimConvergence) || 0));
-  return 18 + range * 0.045 + targetMovement * 0.04 + ownMovement * 0.05 +
+  return 30 + range * 0.06 + targetMovement * 0.04 + ownMovement * 0.08 +
     // T6's normal-difficulty bot_get_aim_error returns 20 and
     // bot_update_lookat scales that error down as convergence approaches 1.
     (suppressed ? 18 : 0) + (1 - convergence) * 20;
