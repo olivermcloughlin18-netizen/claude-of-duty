@@ -35,7 +35,21 @@ export async function run({ page, openGame, screenshot }) {
   probe.places = { before, after: s.lb.place, rows: s.lb.rows.map((r) => `${r.place}:${r.name}:${r.score}`) };
   checks.placeImproves = before > 1 && s.lb.place === 1;
   checks.rowsStillMatch = matches(s);
-  await page.waitForTimeout(800); // let the slide settle for the screenshot
+  // burst of kills, then let the slide settle: row rects must be disjoint and ordered by place
+  await debug((api) => { api.respawnEnemies(); for (const id of ['bot-3', 'bot-4', 'bot-5', 'bot-6']) api.killCombatant(id); });
+  await settle((x) => matches(x));
+  await page.waitForTimeout(700);
+  const readRects = () => page.evaluate(() => [...document.querySelectorAll('#leaderboard .lb-row')]
+    .map((el) => { const r = el.getBoundingClientRect(); return { place: Number(el.children[0].textContent), top: r.top, bottom: r.bottom, want: el.style.transform }; })
+    .sort((a, b) => a.top - b.top));
+  const disjoint = (rs) => rs.length > 1 && rs.every((r, i) => i === 0 || (r.top >= rs[i - 1].bottom - 0.5 && r.place >= rs[i - 1].place));
+  // frames are slow under swiftshader, so allow the transition clock to catch up (up to 10 s) and record how long it took
+  let rects = await readRects();
+  const t0 = Date.now();
+  while (!disjoint(rects) && Date.now() - t0 < 10000) { await page.waitForTimeout(250); rects = await readRects(); }
+  probe.settleMs = Date.now() - t0;
+  probe.rects = rects.map((r) => `${r.place}@${Math.round(r.top)} ${r.want}`);
+  checks.rowsNeverOverlap = disjoint(rects);
   await screenshot('leaderboard-after-kills');
 
   await debug((api) => api.setActive(false));
