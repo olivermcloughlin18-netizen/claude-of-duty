@@ -78,6 +78,8 @@ body.touch-mode #blocker[data-screen="class"] .touch-settings,
 body.touch-mode #blocker[data-screen="error"] .touch-settings { display: none; }
 body.touch-mode #hud-minimap { top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); transform: scale(.62); transform-origin: top left; }
 body.touch-mode #hud-compass { display: none; }
+body.touch-mode #leaderboard { top: calc(max(10px, env(safe-area-inset-top)) + 116px); left: max(10px, env(safe-area-inset-left)); width: 172px; font-size: 11px; }
+body.touch-mode .lb-mode { display: none; }
 body.touch-mode #hud-ammo { bottom: auto; top: max(72px, calc(env(safe-area-inset-top) + 62px)); right: max(18px, env(safe-area-inset-right)); transform: scale(.72); transform-origin: top right; }
 body.touch-mode #killfeed { top: max(118px, calc(env(safe-area-inset-top) + 110px)); right: max(18px, env(safe-area-inset-right)); width: 240px; font-size: 10px; }
 body.touch-mode #match-status { top: max(14px, env(safe-area-inset-top)); max-width: calc(100% - 270px); font-size: 10px; text-align: center; }
@@ -117,4 +119,5 @@ body.touch-mode #scoreboard .touch-only[hidden] { display: none; }
   .touch-hint { right: 14px; bottom: calc(var(--touch-bottom) + 253px); }
   body.touch-mode #match-status { top: max(128px, calc(env(safe-area-inset-top) + 118px)); max-width: 90%; }
   body.touch-mode #killfeed { top: 165px; }
+  body.touch-mode #leaderboard { top: 178px; }
 }
