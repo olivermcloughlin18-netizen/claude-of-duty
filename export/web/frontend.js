@@ -32,7 +32,7 @@ export const SCREENS = ['welcome', 'loading', 'title', 'pause', 'class', 'setup'
 export class Frontend {
   constructor({
     elements = null, onPlay = null, onResume = null, onSelectWeapon = null, onOpenClass = null,
-    onApplySetup = null, waitingForInput = false,
+    onApplySetup = null, pickEnabled = null, waitingForInput = false,
   } = {}) {
     this.elements = elements;
     this.onPlay = onPlay;
@@ -43,6 +43,12 @@ export class Frontend {
     this.onOpenClass = onOpenClass;
     // Receives {mapId, modeId, name, room}; the host saves it and reloads.
     this.onApplySetup = onApplySetup;
+    // () => bool: when true, starting from the title (or a new match) goes through
+    // the class screen first, and its confirm button spawns.
+    this.pickEnabled = pickEnabled;
+    this.picking = false;
+    // True when the last confirm came from the pause menu: the class applies on the next respawn.
+    this.deferred = false;
 
     this.screen = waitingForInput ? 'welcome' : 'loading';
     this.playing = false;
@@ -265,9 +271,18 @@ export class Frontend {
     return this.openClass();
   }
 
+  /** Class screen as a pre-spawn step; confirm spawns, Back/Escape leaves the class alone. */
+  openPick() {
+    this.picking = true;
+    if (this.openClass()) return true;
+    this.picking = false;
+    return false;
+  }
+
   /** Return to whichever shell screen opened the class picker. */
   closeClass() {
     if (this.screen !== 'class') return false;
+    this.picking = false;
     this.screen = this.classReturnScreen === 'pause' ? 'pause' : 'title';
     this.playing = false;
     this.render();
@@ -290,10 +305,14 @@ export class Frontend {
     if (this.screen !== 'class') return false;
     const option = this.weaponOptions.find((weapon) => weapon.id === this.selectedWeapon);
     if (!option?.ready) return false;
-    const result = this.onSelectWeapon?.(option.id);
+    const picking = this.picking;
+    this.deferred = !picking && this.classReturnScreen === 'pause';
+    const result = this.onSelectWeapon?.(option.id, { deferred: this.deferred });
     if (result === false) return false;
     const selected = option.id;
     this.closeClass();
+    // Still inside the confirm click, so the pointer lock request is allowed.
+    if (picking) this.start();
     return result ?? selected;
   }
 
@@ -373,6 +392,11 @@ export class Frontend {
    */
   play() {
     if (!this.ready) return false;
+    if (this.screen === 'title' && this.pickEnabled?.()) return this.openPick();
+    return this.start();
+  }
+
+  start() {
     if (this.screen === 'pause') this.onResume?.();
     else this.onPlay?.();
     return true;
@@ -402,6 +426,7 @@ export class Frontend {
       percent: Math.round(this.fraction * 100),
       caption: this.screen === 'loading' ? this.caption : '',
       selectedWeapon: this.selectedWeapon,
+      picking: this.picking,
       setup: { mapId: this.setup.mapId, modeId: this.setup.modeId, name: this.setup.name, online: this.setup.online },
     };
   }
@@ -466,6 +491,7 @@ export class Frontend {
     if (el.root) {
       el.root.dataset.screen = this.screen;
       el.root.dataset.determinate = String(determinate);
+      el.root.dataset.pick = String(this.picking);
       el.root.style.display = this.visible ? 'flex' : 'none';
       el.root.classList.toggle('ready', this.ready);
     }
@@ -493,7 +519,11 @@ export class Frontend {
     if (el.classSelection) {
       el.classSelection.textContent = selected ? `${selected.name ?? selected.id} selected` : 'Select a rifle';
     }
-    if (el.classConfirm) el.classConfirm.disabled = !selected?.ready;
+    if (el.classConfirm) {
+      el.classConfirm.disabled = !selected?.ready;
+      el.classConfirm.textContent = this.picking ? 'Spawn' : 'Save & equip';
+    }
+    if (el.classHeading) el.classHeading.textContent = this.picking ? 'Choose your class' : 'Create a class';
     for (const card of el.setupMaps?.querySelectorAll('[data-map-id]') ?? []) {
       card.dataset.selected = String(card.dataset.mapId === this.setup.mapId);
     }

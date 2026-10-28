@@ -121,6 +121,7 @@ const state = {
   editor: null,
   wasOpen: false,
   syncPending: false,
+  pending: null,
 };
 
 const cloneClass = (cls) => ({
@@ -246,7 +247,9 @@ function buildEditor() {
   // Save & equip: Frontend equips the highlighted card; this persists the class.
   document.querySelector('[data-action="class-confirm"]')?.addEventListener('click', () => {
     saveClass(editor.index, state.draft);
-    void applyClass(editor.index);
+    // From the pause menu the class waits for the next respawn (CoD rule).
+    if (globalThis.hijacked?.frontend?.deferred) state.pending = editor.index;
+    else { state.pending = null; void applyClass(editor.index); }
   });
   return editor;
 }
@@ -323,6 +326,14 @@ export const system = {
     updateScope();
     syncEditorWithScreen();
   },
+  /** Called on player respawn: equips a class chosen from the pause menu. */
+  applyPending() {
+    if (state.pending == null) return false;
+    const index = state.pending;
+    state.pending = null;
+    void applyClass(index);
+    return true;
+  },
   onKey(code) { return false; },
   onTouchAction(action) { return false; },
   reset() {},
@@ -335,6 +346,7 @@ export const system = {
       secondary: state.current.secondary,
       scoped: state.scoped,
       ready: state.ready,
+      pending: state.pending,
     };
   },
 };
