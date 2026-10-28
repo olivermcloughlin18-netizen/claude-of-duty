@@ -1959,6 +1959,8 @@ function getDebugState() {
       maxHealth: debugRound(enemy.maxHealth),
       dead: enemy.dead,
       state: enemy.state,
+      tactic: enemy.tactic,
+      tacticSeconds: debugRound(enemy.tacticTimer),
       playerVisible: enemy.playerVisible,
       lineOfFireClear: enemy.lineOfFireClear,
       reactionSeconds: debugRound(enemy.reactionTimer),
@@ -2385,10 +2387,10 @@ async function start() {
           hints,
           count: botCount,
           isHostile: (a, b) => combatants.hostile(combatants.idOf(a), combatants.idOf(b)),
-          applyDamage: (target, amount, shooter) => {
+          applyDamage: (target, amount, shooter, info) => {
             const victimId = combatants.idOf(target);
             return victimId ? combatants.applyDamage(victimId, amount, {
-              attackerId: combatants.idOf(shooter), weaponId: 'bot', cause: 'bullet', region: 'torso',
+              attackerId: combatants.idOf(shooter), weaponId: 'bot', cause: 'bullet', region: 'torso', ...info,
             }) : 0;
           },
           onShot: ({ shooter }) => hudArt.markFire(combatants.idOf(shooter)),

@@ -1409,8 +1409,7 @@ export class EnemyManager {
       Math.abs(_friendCenter.y - enemy.root.position.y) < 40;
   }
 
-  // Knife: goes through the same applyDamage hook as bullets. index.html's hook currently ignores the 4th
-  // argument (HOOK REQUEST in the lane report) and records weaponId 'bot'/cause 'bullet'.
+  // Knife: goes through the same applyDamage hook as bullets; the 4th argument tags the kill as a knife.
   enemyMelee(enemy) {
     const target = enemy.currentTarget ?? this.player;
     if (this.targetDead(target)) return 0;
