@@ -1333,7 +1333,9 @@ export class EnemyManager {
       // Team modes: prefer spawning near teammates (FFA has no friends, so no bonus).
       const friendDistance = friends.reduce((min, point) => Math.min(min, candidate.position.distanceTo(point)), Infinity);
       const friendBonus = friends.length ? 500 * (1 - Math.min(friendDistance, 1500) / 1500) : 0;
-      const score = Math.min(nearest, 2200) - visibleThreats * 1300 - recentPenalty + friendBonus;
+      // With no threats every candidate ties; break it randomly so two online clients picking blind rarely share
+      // a marker. ponytail: still 1/N, server-assigned spawn slots if that matters.
+      const score = Math.min(nearest, 2200) - visibleThreats * 1300 - recentPenalty + friendBonus + (threats.length ? 0 : Math.random());
       if (score > bestScore) {
         bestScore = score;
         best = candidate;

@@ -1094,6 +1094,7 @@ function buildSetupCard(dataKey, id, name, detail, image = null) {
 }
 setupModes.replaceChildren(...Object.values(MODES).map((entry) => buildSetupCard(
   'modeId', entry.id, entry.name, `${entry.teams ? 'Teams' : 'Everyone for themselves'}${entry.online ? '' : ' · offline'}`)));
+frontend.setSetup({ modes: Object.values(MODES) });
 function applySetup({ mapId, modeId, name, room }) {
   let target = room;
   if (target) {
@@ -2267,7 +2268,7 @@ async function start() {
     });
     listMaps().then((maps) => {
       setupMaps.replaceChildren(...maps.map((entry) => buildSetupCard('mapId', entry.id, entry.name, `mp_${entry.id}`, entry.card)));
-      frontend.render();
+      frontend.setSetup({ maps }); // chooseMap() only accepts ids it was given
     });
     // Started here so the sky and probes still transfer alongside the map.
     loadEnvironment();

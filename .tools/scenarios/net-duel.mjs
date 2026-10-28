@@ -69,24 +69,34 @@ export async function run({ page, screenshot, artifactRoot }) {
       bootedOnline = (await stateOf(pageB)).config.online === true;
     }
     for (const target of [page, pageB]) await debug(target, (api) => { api.setActive(true); api.resume(); });
+    // The second join starts the match and both clients re-pick a spawn; they must not share one.
+    const feetOf = (target) => target.evaluate(() => globalThis.hijacked.player.feetPosition.toArray());
+    const [spawnA, spawnB] = [await feetOf(page), await feetOf(pageB)];
+    const spawnGap = Math.hypot(spawnA[0] - spawnB[0], spawnA[2] - spawnB[2]);
 
     // Find an open lane at eye height from A's spawn, and stand B 300u down it.
     const lane = await page.evaluate(async () => {
       const THREE = await import('three');
       const api = globalThis.hijacked;
-      const feet = api.player.feetPosition;
       const ray = new THREE.Raycaster().ray;
-      for (let i = 0; i < 16; i += 1) {
+      // A's spawn is a random pick: try it first, then every spawn candidate.
+      const origins = [api.player.feetPosition.clone(), ...api.enemies.spawnCandidates.map((c) => c.position)];
+      for (const feet of origins) for (let i = 0; i < 16; i += 1) {
         const angle = (i / 16) * Math.PI * 2;
         const dir = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
         ray.set(new THREE.Vector3(feet.x, feet.y + 40, feet.z), dir);
-        const wall = api.collisionWorld.raycastFirst(ray, 2, 700);
-        if (!wall) return { a: [feet.x, feet.y, feet.z], b: [feet.x + dir.x * 300, feet.y, feet.z + dir.z * 300] };
+        if (api.collisionWorld.raycastFirst(ray, 2, 700)) continue;
+        // B's spot needs floor too: a drop fall-resets B to its own spawn.
+        const b = [feet.x + dir.x * 300, feet.y, feet.z + dir.z * 300];
+        ray.set(new THREE.Vector3(b[0], b[1] + 40, b[2]), new THREE.Vector3(0, -1, 0));
+        if (api.collisionWorld.raycastFirst(ray, 0, 80)) return { a: [feet.x, feet.y, feet.z], b, candidates: origins.length - 1 };
       }
       return null;
     });
     await debug(page, (api, v) => api.teleportPlayer(v), lane.a);
     await debug(pageB, (api, v) => api.teleportPlayer(v), lane.b);
+    await sleep(1500);
+    lane.b = await feetOf(pageB); // B can settle off the lane; aim where it really stands
     const chest = (p) => [p[0], p[1] + 43, p[2]];
     await debug(page, (api, v) => api.lookAt(v), chest(lane.b));
     await debug(pageB, (api, v) => api.lookAt(v), chest(lane.a));
@@ -162,6 +172,7 @@ export async function run({ page, screenshot, artifactRoot }) {
 
     return {
       checks: {
+        spawnsApart: spawnGap > 200,
         bothOnline: a.config.online === true && b.config.online === true && a.systems.net.online && b.systems.net.online,
         sameRoomNoBots: a.systems.net.room === room && b.systems.net.room === room && a.enemies.length === 0 && b.enemies.length === 0,
         puppetsVisible: matched !== null && aBefore.systems.net.peers[0]?.hasPuppet === true && bBefore.systems.net.peers[0]?.hasPuppet === true,

@@ -354,6 +354,8 @@ export function createNetPlay({ createClient = createNetClient } = {}) {
     });
     for (const msg of inbox) handle(msg);
     inbox = [];
+    // Everyone boots on the map's one start marker; re-pick away from any peer already placed there.
+    if ([...peers.values()].some((p) => p.samples.length)) ctx.playerHealth.respawn();
     setStandings([{ id: selfId, kills: 0, deaths: 0 }, ...[...peers.values()].map((p) => ({ id: p.id, name: p.name, kills: 0, deaths: 0 }))]);
     mountUi();
     say(`Online: room ${client.roomCode}`);
@@ -478,7 +480,8 @@ export function createNetPlay({ createClient = createNetClient } = {}) {
     connect,
     get online() { return online; },
     get roomMapId() { return MAP_IDS.includes(joined?.map) ? joined.map : null; },
-    threats() { return [...peers.values()].filter((p) => p.alive && p.puppet).map((p) => p.puppet.root.position); },
+    // Last reported feet, not the puppet: an unplaced (just respawned) puppet still stands on its corpse.
+    threats() { return [...peers.values()].filter((p) => p.alive && p.puppet && p.samples.length).map((p) => new ctx.THREE.Vector3(...p.samples.at(-1).pos)); },
     disconnect() { for (const off of offs) off(); client?.disconnect(); online = false; },
   };
 }
