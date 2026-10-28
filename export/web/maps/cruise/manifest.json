@@ -1,0 +1,261 @@
+{
+  "id": "cruise",
+  "name": "Cruise Liner",
+  "description": "Sunny-afternoon cruise ship at sea: lido deck with pool, covered promenades, two-deck atrium, theatre, cabin corridors and a bow bridge.",
+  "players": "6-8",
+  "spawns": [
+    {
+      "position": [
+        -3400,
+        0,
+        -300
+      ],
+      "yaw": -1.6263
+    },
+    {
+      "position": [
+        -3400,
+        0,
+        300
+      ],
+      "yaw": -1.5153
+    },
+    {
+      "position": [
+        -3250,
+        0,
+        480
+      ],
+      "yaw": -1.4796
+    },
+    {
+      "position": [
+        -3250,
+        0,
+        -480
+      ],
+      "yaw": -1.662
+    },
+    {
+      "position": [
+        -2950,
+        0,
+        -600
+      ],
+      "yaw": -1.6914
+    },
+    {
+      "position": [
+        -2950,
+        0,
+        600
+      ],
+      "yaw": -1.4502
+    },
+    {
+      "position": [
+        -2900,
+        168,
+        -400
+      ],
+      "yaw": -1.6522
+    },
+    {
+      "position": [
+        -2900,
+        168,
+        400
+      ],
+      "yaw": -1.4893
+    },
+    {
+      "position": [
+        -650,
+        168,
+        -700
+      ],
+      "yaw": -2.1588
+    },
+    {
+      "position": [
+        0,
+        0,
+        -620
+      ],
+      "yaw": 2.5686
+    },
+    {
+      "position": [
+        0,
+        0,
+        620
+      ],
+      "yaw": 0.573
+    },
+    {
+      "position": [
+        650,
+        168,
+        700
+      ],
+      "yaw": 0.9828
+    },
+    {
+      "position": [
+        3350,
+        0,
+        -120
+      ],
+      "yaw": 1.5932
+    },
+    {
+      "position": [
+        3350,
+        0,
+        120
+      ],
+      "yaw": 1.5484
+    },
+    {
+      "position": [
+        2900,
+        0,
+        -500
+      ],
+      "yaw": 1.6725
+    },
+    {
+      "position": [
+        2900,
+        0,
+        500
+      ],
+      "yaw": 1.4691
+    },
+    {
+      "position": [
+        2500,
+        0,
+        -250
+      ],
+      "yaw": 1.6263
+    },
+    {
+      "position": [
+        1950,
+        168,
+        -250
+      ],
+      "yaw": 1.634
+    },
+    {
+      "position": [
+        1950,
+        168,
+        250
+      ],
+      "yaw": 1.5076
+    },
+    {
+      "position": [
+        2000,
+        0,
+        0
+      ],
+      "yaw": 1.5708
+    }
+  ],
+  "playerStart": {
+    "position": [
+      -3500,
+      0,
+      -120
+    ],
+    "yaw": -1.5926
+  },
+  "bounds": {
+    "min": [
+      -3606,
+      -440,
+      -906
+    ],
+    "max": [
+      3704,
+      716,
+      906
+    ]
+  },
+  "playArea": {
+    "min": [
+      -3600,
+      -40,
+      -900
+    ],
+    "max": [
+      3700,
+      700,
+      900
+    ]
+  },
+  "minimap": {
+    "image": "minimap.png",
+    "centerX": 50,
+    "centerZ": 0,
+    "size": 7600,
+    "flipU": 1,
+    "flipV": -1,
+    "minimapSpan": 1250
+  },
+  "lighting": {
+    "sun": {
+      "color": "#fff1d6",
+      "intensity": 1.5,
+      "position": [
+        -716,
+        986,
+        875
+      ]
+    },
+    "hemi": {
+      "sky": "#a8c8f0",
+      "ground": "#3a5a78",
+      "intensity": 0.45
+    },
+    "fog": {
+      "color": "#b8d4ee",
+      "near": 900,
+      "far": 5200
+    },
+    "probeIntensity": 1,
+    "environmentIntensity": 1,
+    "exposure": 1.3,
+    "saturation": 1,
+    "probeAmbient": [
+      0.2,
+      0.19,
+      0.18
+    ],
+    "note": "Pass env/probe/vision/lut paths to applyEnvironmentLighting() and loadGradeLut(); apply sun/hemi/fog from these hints.",
+    "paths": {
+      "env": "textures/env/",
+      "probe": "textures/probe/",
+      "vision": "vision.json",
+      "lut": "textures/lut.png"
+    }
+  },
+  "format": "claude-of-duty-map-v1",
+  "files": {
+    "glb": "cruise_optimized.glb",
+    "collisionBvh": "cruise_collision_bvh.json",
+    "navmesh": "cruise.navmesh.bin",
+    "navHints": "cruise_nav_hints.json",
+    "ladders": "cruise_ladders.json",
+    "probes": "cruise_probes.json",
+    "vision": "vision.json",
+    "lut": "textures/lut.png",
+    "env": "textures/env/",
+    "probe": "textures/probe/",
+    "minimap": "minimap.png",
+    "card": "card.jpg"
+  }
+}

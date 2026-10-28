@@ -1,0 +1,43 @@
+{
+  "format": "hijacked-collision-bvh-v1",
+  "threeMeshBvhVersion": "0.9.14",
+  "source": ".work/maps/cruise/collision.gltf",
+  "binary": "cruise_collision_bvh.bin",
+  "coordinateSystem": "three-y-up",
+  "vertices": 33276,
+  "triangles": 11092,
+  "bounds": {
+    "min": [
+      -3606,
+      -40,
+      -906
+    ],
+    "max": [
+      3703.923095703125,
+      716,
+      906
+    ]
+  },
+  "buildMilliseconds": 34,
+  "byteLength": 615392,
+  "layout": {
+    "position": {
+      "byteOffset": 0,
+      "byteLength": 399312,
+      "type": "Float32Array",
+      "count": 99828
+    },
+    "index": {
+      "byteOffset": 399312,
+      "byteLength": 133104,
+      "type": "Uint32Array",
+      "count": 33276
+    },
+    "roots": [
+      {
+        "byteOffset": 532416,
+        "byteLength": 82976
+      }
+    ]
+  }
+}
