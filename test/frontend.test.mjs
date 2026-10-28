@@ -211,3 +211,57 @@ test('frontend setup screen picks a map and mode and hands them to onApplySetup'
   frontend.closeSetup();
   assert.equal(frontend.screen, 'title');
 });
+
+test('play from the title goes through the class pick, confirm spawns, Escape keeps the class', () => {
+  const calls = [];
+  let pick = true;
+  const frontend = new Frontend({
+    pickEnabled: () => pick,
+    onPlay: () => calls.push('play'),
+    onResume: () => calls.push('resume'),
+    onSelectWeapon: (id, opts) => { calls.push(`select:${id}:${opts.deferred}`); return id; },
+  });
+  frontend.setWeapons([{ id: 'm27', ready: true }, { id: 'tar_smg', ready: true }], 'm27');
+  frontend.setReady();
+
+  assert.equal(frontend.play(), true);
+  assert.equal(frontend.screen, 'class');
+  assert.equal(frontend.getState().picking, true);
+  assert.deepEqual(calls, [], 'nothing spawns before the pick is confirmed');
+  assert.equal(frontend.closeClass(), 'title', 'Escape/Back keeps the class and returns to title');
+  assert.equal(frontend.getState().picking, false);
+
+  frontend.play();
+  frontend.chooseWeapon('tar_smg');
+  frontend.confirmClass();
+  assert.deepEqual(calls, ['select:tar_smg:false', 'play'], 'confirm equips then asks the host to spawn');
+
+  pick = false;
+  calls.length = 0;
+  assert.equal(frontend.play(), true);
+  assert.deepEqual(calls, ['play'], 'a disabled pick (Gun Game, autostart) spawns directly');
+
+  frontend.enter();
+  frontend.suspend();
+  pick = true;
+  calls.length = 0;
+  frontend.play();
+  assert.deepEqual(calls, ['resume'], 'resuming from pause never re-picks');
+  frontend.suspend();
+  assert.equal(frontend.openPick(), true, 'a new match can reopen the pick from pause');
+  frontend.confirmClass();
+  assert.equal(calls.at(-1), 'resume');
+});
+
+test('a class chosen from the pause menu is deferred to the next respawn', () => {
+  const calls = [];
+  const frontend = new Frontend({ onSelectWeapon: (id, opts) => { calls.push(opts.deferred); return id; } });
+  frontend.setWeapons([{ id: 'm27', ready: true }], 'm27');
+  frontend.setReady();
+  frontend.enter();
+  frontend.suspend();
+  frontend.openClass();
+  frontend.confirmClass();
+  assert.deepEqual(calls, [true]);
+  assert.equal(frontend.deferred, true);
+});

@@ -265,6 +265,23 @@
     letter-spacing: .2em; text-transform: uppercase;
   }
   .fe-class-card[data-selected="true"] .fe-class-state { color: var(--fe-accent); }
+  /* Pick step: five compact columns so the 14 cards fit without scrolling. */
+  #blocker[data-pick="true"] .fe-class-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; overflow: visible; }
+  #blocker[data-pick="true"] .fe-class-card { min-height: 0; padding: 5px; grid-template-columns: 1fr; gap: 2px; text-align: center; }
+  #blocker[data-pick="true"] .fe-class-art { height: 44px; }
+  #blocker[data-pick="true"] .fe-class-name { font-size: 12px; letter-spacing: .08em; }
+  #blocker[data-pick="true"] .fe-class-role, #blocker[data-pick="true"] .fe-class-stats { display: none; }
+  #blocker[data-pick="true"] .fe-class-state { margin-top: 2px; }
+  #blocker[data-pick="true"] .fe-class-sub { display: none; }
+  /* Short screens (phone landscape): the panel scrolls and the Spawn bar stays in view. */
+  @media (max-height: 520px) {
+    #blocker[data-pick="true"] .fe-content > header { display: none; }
+    #blocker[data-pick="true"] .fe-class { overflow-y: auto; }
+    #blocker[data-pick="true"] .fe-class-grid { flex: none; }
+    #blocker[data-pick="true"] .fe-class-actions { position: sticky; bottom: 0; z-index: 3; padding: 6px 0; background: rgba(4, 10, 15, .9); }
+    #blocker[data-pick="true"] .fe-class-art { height: 34px; }
+    #blocker[data-pick="true"] .fe-class-state { display: none; }
+  }
   .fe-class-actions { display: flex; justify-content: center; gap: 8px; margin-top: 1px; }
   .fe-class-actions .fe-btn { width: 180px; }
   .fe-class-actions .fe-btn:disabled { cursor: wait; color: rgba(206, 224, 240, .4); }
@@ -1017,6 +1034,10 @@ const setupMaps = document.getElementById('fe-setup-maps');
 const setupModes = document.getElementById('fe-setup-modes');
 const setupName = document.getElementById('fe-online-name');
 const setupRoom = document.getElementById('fe-online-room');
+// Class pick before spawning. Gun Game forces the ladder weapon, and the test
+// harness's ?autostart skips it unless ?pick=1 asks for it.
+const urlFlags = new URLSearchParams(location.search);
+const pickClassFirst = () => mode.id !== 'gun' && (!urlFlags.has('autostart') || urlFlags.has('pick'));
 const frontend = new Frontend({
   waitingForInput: blocker.dataset.screen === 'welcome',
   elements: {
@@ -1035,11 +1056,14 @@ const frontend = new Frontend({
     setupOnline: document.getElementById('fe-online'),
     classSelection: document.getElementById('fe-class-selection'),
     classConfirm: blocker.querySelector('[data-action="class-confirm"]'),
+    classHeading: blocker.querySelector('.fe-class .fe-heading'),
     onAction: (name) => menuAction(name),
   },
   onPlay: () => requestPlay(),
   onResume: () => requestPlay(),
-  onSelectWeapon: (id) => selectWeapon(id),
+  // From the pause menu the class waits for the next respawn (loadout.applyPending).
+  onSelectWeapon: (id, { deferred } = {}) => (deferred ? id : selectWeapon(id)),
+  pickEnabled: pickClassFirst,
   onOpenClass: () => loadAllWeaponSlots(),
   onApplySetup: (choice) => applySetup(choice),
 });
@@ -1281,8 +1305,7 @@ document.getElementById('touch-score-close').addEventListener('click', () => {
   renderMatchUi();
 });
 document.getElementById('touch-restart').addEventListener('click', () => {
-  restartMatch();
-  requestPlay();
+  if (!restartAndPick()) requestPlay();
 });
 
 // `ignoreCapture` lets movement continue while a system owns look/fire input.
@@ -1521,6 +1544,14 @@ function restartMatch() {
   enemies?.enemies.forEach((enemy) => enemy.spawnAt(enemies.respawnFor(enemy)));
   playerHealth?.respawn();
   renderMatchUi();
+}
+
+// A new match starts with the class pick again (not in Gun Game / autostart).
+function restartAndPick() {
+  restartMatch();
+  if (!pickClassFirst()) return false;
+  suspendPlay();
+  return frontend.openPick();
 }
 
 // ---------- kill funnel ----------
@@ -2195,7 +2226,7 @@ document.addEventListener('keydown', (event) => {
     return;
   }
   if (event.code === 'Enter' && match.phase === 'ended' && !net.online) {
-    restartMatch();
+    restartAndPick();
     return;
   }
   // Any key but Esc starts or resumes from the shell — Esc is what released
@@ -2356,6 +2387,7 @@ async function start() {
         document.body.classList.add('player-dead');
       },
       onRespawn: () => {
+        loadoutSystem.applyPending();
         resetPlayerLife();
       },
     });
