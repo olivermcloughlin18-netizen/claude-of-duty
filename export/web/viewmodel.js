@@ -36,10 +36,11 @@ const MAGAZINE_TAGS = Object.freeze(new Set(['tag_clip', ...SPARE_MAGAZINE_TAGS]
 // orbiting the camera as a whole.
 const SPRINT_POSE = Object.freeze({
   pitch: -0.45,
-  yaw: 0.65,
+  yaw: 0.5,
   roll: -0.38,
-  x: 0.2,
-  y: -1.2,
+  // Low and right of centre so the gun clears the path ahead while running.
+  x: 1.2,
+  y: -2.4,
   z: -0.5,
   // Close to the camera so the arms behind it barely move while the
   // muzzle out front does the travelling.
