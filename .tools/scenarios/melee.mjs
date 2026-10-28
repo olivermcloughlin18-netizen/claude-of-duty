@@ -32,12 +32,20 @@ export async function run({ page, openGame, screenshot }) {
   const freeze = (t) => page.evaluate((T) => {
     const vm = globalThis.hijacked.viewmodel;
     const proto = Object.getPrototypeOf(vm).updateMelee;
-    vm.updateMelee = function hold(dt) { if (this.meleeTime < 0) return; this.meleeTime = T - dt; proto.call(this, dt); };
+    vm.updateMelee = function hold(dt) { if (this.meleeTime < 0) return; const step = Math.min(dt, T); this.meleeTime = T - step; proto.call(this, step); };
   }, t);
+  // A fresh round: score reset, every bot back, then the bots we do not need removed.
+  // The bot left standing shoots back; a tough player keeps the test about the knife, not about surviving.
+  const toughness = (hp) => page.evaluate((v) => { const h = globalThis.hijacked.playerHealth; h.maxHealth = v; h.health = v; }, hp);
+  const fresh = async () => {
+    await debug((api) => { api.restartMatch(); api.respawnEnemies(); for (let i = 1; i < 6; i += 1) api.killCombatant(`bot-${i}`); });
+    await toughness(5000);
+  };
   const thaw = () => page.evaluate(() => { delete globalThis.hijacked.viewmodel.updateMelee; });
 
   await debug((api) => { api.setActive(true); api.resume(); api.setGraphicsPreset('performance'); });
   await waitFor(page, (api) => api.getState().weapon.ready === true && api.getState().enemies.length >= 6, null, 90000);
+  await toughness(5000);
   const boot = await debug((api) => api.getState());
   checks.startsIdle = boot.weapon.melee.cooldown === 0 && boot.weapon.melee.swings === 0;
   // Keep the other bots out of the way of the test.
@@ -74,22 +82,26 @@ export async function run({ page, openGame, screenshot }) {
   await section('swingShots', async () => {
     // Pose evidence: wound up, mid-slash and follow-through, bot in front each time.
     for (const [name, t] of [['wind', 0.08], ['slash', 0.17], ['follow', 0.27], ['retract', 0.56]]) {
-      await debug((api) => api.respawnEnemies());
-      await debug((api) => { for (let i = 1; i < 6; i += 1) api.killCombatant(`bot-${i}`); });
+      await fresh();
       await place(0, 60);
       await freeze(t);
+      const before = (await melee()).swings;
       await page.keyboard.press('KeyV');
-      await waitFor(page, (api) => api.getState().weapon.melee.swings >= 1, null, 60000);
-      await page.waitForTimeout(700);
+      try {
+        await waitFor(page, (api, [T, n]) => api.getState().weapon.melee.swings > n && Math.abs(hijacked.viewmodel.meleeTime - T) < 0.02, [t, before], 40000);
+      } catch (error) {
+        probe[`${name}Diag`] = await debug((api) => ({ s: api.getState().weapon.melee, mt: hijacked.viewmodel.meleeTime, dead: api.getState().player.dead, phase: api.getState().match.phase, active: api.getState().active }));
+        throw error;
+      }
+      await page.waitForTimeout(1200); // let a few frames draw the held pose
       await screenshot(`melee-${name}`);
       await thaw();
       await idle();
-      await debug((api) => api.respawnEnemies());
     }
   });
 
   await section('miss', async () => {
-    await debug((api) => { api.respawnEnemies(); for (let i = 1; i < 6; i += 1) api.killCombatant(`bot-${i}`); });
+    await fresh();
     await idle();
     const before = await melee();
     const placed = await place(0, 200);
@@ -103,6 +115,7 @@ export async function run({ page, openGame, screenshot }) {
   });
 
   await section('reloadCancel', async () => {
+    await fresh();
     await idle();
     await debug((api) => api.setWeaponAmmo(10, 100));
     await page.keyboard.press('KeyR');
@@ -126,7 +139,8 @@ export async function run({ page, openGame, screenshot }) {
   });
 
   await section('killcam', async () => {
-    await debug((api) => { api.respawnEnemies(); api.respawnPlayer(); });
+    await debug((api) => { api.restartMatch(); api.respawnEnemies(); api.respawnPlayer(); });
+    await toughness(100);
     await waitFor(page, (api) => api.getState().systems.killcam.buffered >= 40, null, 120000);
     const kill = await debug((api) => api.killCombatant('player', { attackerId: 'bot-0', weaponId: 'knife', cause: 'melee' }));
     probe.botKnifeKill = kill.killed;
@@ -140,7 +154,7 @@ export async function run({ page, openGame, screenshot }) {
     }));
     probe.killcam = text;
     checks.botKnifeKillKilledPlayer = kill.killed === true && kill.event?.cause === 'melee' && kill.event?.weaponId === 'knife';
-    checks.killcamPlaysForKnife = /Killcam/.test(text.label ?? '') && /knife/i.test(text.sub ?? '');
+    checks.killcamPlaysForKnife = /killcam/i.test(text.label ?? '') && /knife/i.test(text.sub ?? '');
     checks.botKnifeKillInFeed = /knife/i.test(text.feed ?? '');
     await waitFor(page, (api) => api.getState().systems.killcam.playing === false, null, 120000);
     await waitFor(page, (api) => api.getState().player.dead === false, null, 60000);
@@ -150,6 +164,7 @@ export async function run({ page, openGame, screenshot }) {
   await openGame('mode=tdm');
   await debug((api) => { api.setActive(true); api.resume(); api.setGraphicsPreset('performance'); });
   await waitFor(page, (api) => api.getState().weapon.ready === true && api.getState().enemies.length >= 6, null, 90000);
+  await toughness(5000);
   await section('teammate', async () => {
     const teams = await debug((api) => Object.fromEntries(api.getState().combatants.map((c) => [c.id, c.team])));
     checks.botZeroIsTeammate = teams['bot-0'] === teams.player;

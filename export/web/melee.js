@@ -150,13 +150,13 @@ export function createMelee({
 // knife blade points down its local -z, so +y turns the blade to the left.
 // Keyframes are [time, position, rotation]; segments ease with smoothstep.
 const KEYS = [
-  [0.00, [11, -16, -7], [0.7, -0.6, -0.9]],
-  [0.07, [8.5, -6, -9], [0.55, -1.05, -0.85]],   // wound up: blade up and out to the right
-  [0.17, [1.5, -5.2, -12.5], [0.25, -0.1, -0.35]], // mid-slash: blade across the middle
-  [0.26, [-5.5, -6.5, -11.5], [-0.05, 0.95, 0.2]], // follow-through to the left
-  [0.40, [-5, -7, -11.5], [-0.05, 0.9, 0.2]],
-  [0.56, [4, -12, -8.5], [0.45, -0.3, -0.6]],
-  [0.68, [11, -17, -7], [0.7, -0.6, -0.9]],
+  [0.00, [13, -15, -9], [0.5, -1.3, -0.8]],
+  [0.07, [7, -3.8, -9], [0.4, -1.15, -0.6]],   // wound up: blade out to the right, edge leading
+  [0.17, [0.5, -3.6, -10], [0.12, 0.2, -0.15]],   // mid-slash: blade crossing the middle
+  [0.26, [-6, -4.4, -9.5], [-0.1, 1.2, 0.25]],   // follow-through to the left
+  [0.40, [-5.5, -4.8, -9.5], [-0.1, 1.15, 0.25]],
+  [0.56, [3, -10, -9], [0.4, -0.2, -0.5]],
+  [0.68, [13, -16, -9], [0.5, -1.3, -0.8]],
 ];
 const smooth = (x) => x * x * (3 - 2 * x);
 const mix = (a, b, k) => a + (b - a) * k;

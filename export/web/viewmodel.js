@@ -828,8 +828,8 @@ export class Viewmodel {
     this.knife.position.fromArray(pose.p);
     this.knife.rotation.set(pose.r[0], pose.r[1], pose.r[2], 'YXZ');
     const lower = this.meleeTime >= 0 ? pose.lower : 0;
-    this.meleeGroup.position.set(3 * lower, -16 * lower, 2 * lower);
-    this.meleeGroup.rotation.set(-0.5 * lower, 0, 0.25 * lower);
+    this.meleeGroup.position.set(4 * lower, -34 * lower, 6 * lower);
+    this.meleeGroup.rotation.set(-0.9 * lower, 0, 0.3 * lower);
   }
 
   fire({ intro = false } = {}) {
