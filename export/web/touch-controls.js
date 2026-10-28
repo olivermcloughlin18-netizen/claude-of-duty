@@ -1,7 +1,7 @@
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 // Buttons that fire once on press and are handled by the game, not by held state.
-export const ACTION_KINDS = new Set(['reload', 'streak', 'swap']);
+export const ACTION_KINDS = new Set(['reload', 'streak', 'swap', 'melee']);
 
 // Pointer ownership is independent of DOM hit testing. A finger keeps its job
 // until released, even when it crosses another control or leaves the screen.

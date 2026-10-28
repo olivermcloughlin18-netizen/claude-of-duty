@@ -208,7 +208,7 @@ export function createServer(options = {}) {
     const player = {
       id, ws: conn.ws, name: sanitizeName(msg.name, `Player${room.players.size + 1}`),
       kills: 0, deaths: 0, hp: cfg.maxHealth, alive: true, respawnAt: 0,
-      pos: null, yaw: 0, pitch: 0, vel: [0, 0, 0], weaponId: 'm27', crouch: false, lastShotAt: 0, lastShotRelayAt: 0, lastDamageAt: 0,
+      pos: null, yaw: 0, pitch: 0, vel: [0, 0, 0], weaponId: 'm27', crouch: false, lastShotAt: 0, lastMeleeAt: 0, lastShotRelayAt: 0, lastDamageAt: 0,
     };
     conn.room = room;
     conn.player = player;
@@ -263,16 +263,20 @@ export function createServer(options = {}) {
     if (!target.alive) return reject(conn, msg, 'target_dead');
     const weapon = Object.hasOwn(WEAPONS, msg.weaponId) ? WEAPONS[msg.weaponId] : null;
     if (!weapon) return reject(conn, msg, 'unknown_weapon');
-    const maxDamage = weapon.damage * (msg.headshot ? HEADSHOT_MULT : 1);
+    // A weapon with `maxRange` is melee: no headshot bonus, its own range cap and its own rate clock
+    // (a swing right after a rifle hit is legal, and does not delay the next bullet).
+    const melee = weapon.maxRange !== undefined;
+    const maxDamage = weapon.damage * (msg.headshot && !melee ? HEADSHOT_MULT : 1);
     if (msg.damage <= 0 || msg.damage > maxDamage + 1e-6) return reject(conn, msg, 'bad_damage');
-    if (now - shooter.lastShotAt < (60000 / weapon.rpm) * cfg.fireRateSlack) return reject(conn, msg, 'fire_rate');
+    const lastAt = melee ? shooter.lastMeleeAt : shooter.lastShotAt;
+    if (now - lastAt < (60000 / weapon.rpm) * cfg.fireRateSlack) return reject(conn, msg, 'fire_rate');
     if (!shooter.pos || !target.pos) return reject(conn, msg, 'no_position');
     if (dist(msg.shooterPos, shooter.pos) > cfg.posTolerance || dist(msg.targetPos, target.pos) > cfg.posTolerance) {
       return reject(conn, msg, 'position_mismatch');
     }
-    if (dist(msg.shooterPos, msg.targetPos) > cfg.maxRange) return reject(conn, msg, 'range');
+    if (dist(msg.shooterPos, msg.targetPos) > (weapon.maxRange ?? cfg.maxRange)) return reject(conn, msg, 'range');
 
-    shooter.lastShotAt = now;
+    if (melee) shooter.lastMeleeAt = now; else shooter.lastShotAt = now;
     const amount = Math.min(msg.damage, target.hp);
     target.hp -= amount;
     target.lastDamageAt = now;

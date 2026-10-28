@@ -62,10 +62,10 @@ Controls:
 - `WASD`: move; mouse: look
 - `Shift`: sprint; `Space`: jump
 - `C` or `Ctrl`: crouch; `B`: respawn
-- `Left mouse`: fire; `R`: reload
+- `Left mouse`: fire; `R`: reload; `V`: knife (one-hit kill, 72u reach, short lunge, 0.7 s recovery; touch: KNIFE button)
 - `Right mouse`: aim down sights
 - `Tab`: hold the free-for-all scoreboard
-- `N`: navmesh overlay; `V`: collision overlay
+- `N`: navmesh overlay; `Shift+V`: collision overlay
 - `P`: find and draw a navmesh path to the point under the crosshair
 - `Esc`: pause and release the mouse
 

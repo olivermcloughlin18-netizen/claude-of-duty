@@ -121,6 +121,37 @@ test('bogus hits are rejected', async () => {
   await done();
 });
 
+test('knife claims: one-hit kill in melee range, own range cap, rate limit, no headshot bonus', async () => {
+  const { a, b, claim, done } = await duel();
+  const knife = (over = {}) => claim({ weaponId: 'knife', damage: 150, headshot: false, ...over });
+  const reject = async (over) => { a.log.length = 0; a.send(knife(over)); const r = await a.wait('hit_rejected'); await sleep(60); return r.reason; };
+  // beyond the 120u melee cap (a rifle may shoot this far) -> range
+  b.send(state([300, 0, 0])); await sleep(60);
+  assert.equal(await reject({ targetPos: [300, 0, 0] }), 'range');
+  b.send(state([100, 0, 0])); await sleep(60);
+  assert.equal(await reject({ damage: 151 }), 'bad_damage');
+  assert.equal(await reject({ damage: 151, headshot: true }), 'bad_damage'); // no x2 for a knife
+  // a legal swing kills in one hit, with the knife id on the kill
+  a.log.length = 0;
+  a.send(knife({ targetPos: [100, 0, 0] }));
+  const k = await a.wait('kill');
+  assert.equal(k.weaponId, 'knife'); assert.equal(k.victimId, b.id);
+  assert.equal((await b.wait('damage', (m) => m.weaponId === 'knife')).amount, 100); // clamped to hp
+  await done();
+});
+
+test('knife rate limit is its own clock: swing right after a rifle hit is legal, a second swing is not', async () => {
+  const { a, b, claim, done } = await duel();
+  b.send(state([100, 0, 0])); await sleep(60);
+  a.send(claim({ damage: 20, headshot: false, targetPos: [100, 0, 0] })); // rifle hit
+  a.send(claim({ weaponId: 'knife', damage: 50, headshot: false, targetPos: [100, 0, 0] })); // immediate swing
+  a.send(claim({ weaponId: 'knife', damage: 50, headshot: false, targetPos: [100, 0, 0] })); // too soon
+  assert.equal((await a.wait('hit_rejected')).reason, 'fire_rate');
+  await sleep(60);
+  assert.equal(b.count('damage'), 2);
+  await done();
+});
+
 test('room full', async () => {
   const s = await startServer({ maxConnPerIp: 20 });
   const cs = [client(s.url)];

@@ -1,19 +1,22 @@
 // Generates server/weapons.json from export/web/weapons.js so the server's hit validation never drifts.
 //   node .tools/sync_server_weapons.mjs          write the file
 //   node .tools/sync_server_weapons.mjs --check  exit 1 if the file is stale
-// Entry: { damage: damage * pellets (max claim per aggregated hit, before the x2 headshot), rpm: ceil(fastest rpm * 1.25) }.
+// Entry: { damage: damage * pellets (max claim per aggregated hit, before the x2 headshot), rpm: ceil(fastest rpm * 1.25), maxRange? (melee only) }.
 import fs from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { WEAPONS } from '../export/web/weapons.js';
+import { KNIFE, WEAPONS } from '../export/web/weapons.js';
 
 export const RPM_SLACK = 1.25;
 export const OUTPUT = fileURLToPath(new URL('../server/weapons.json', import.meta.url));
 
-export function buildTable(weapons = WEAPONS) {
+// The knife rides along with a `maxRange` (its claims are checked against that, not the server-wide cap).
+export function buildTable(weapons = { ...WEAPONS, [KNIFE.id]: KNIFE }) {
   return Object.fromEntries(Object.keys(weapons).sort().map((id) => {
     const def = weapons[id];
     const fastest = Math.max(def.roundsPerMinute, def.initialRoundsPerMinute ?? 0);
-    return [id, { damage: def.damage * (def.pellets ?? 1), rpm: Math.ceil(fastest * RPM_SLACK) }];
+    const entry = { damage: def.damage * (def.pellets ?? 1), rpm: Math.ceil(fastest * RPM_SLACK) };
+    if (def.melee) entry.maxRange = def.serverRange;
+    return [id, entry];
   }));
 }
 

@@ -379,6 +379,7 @@
   #match-status .teams { display: block; font-size: 13px; letter-spacing: .14em; }
   #match-status .teams .allies { color: #7fd0ff; } #match-status .teams .axis { color: #ff8b7a; }
   .killfeed-entry img { height: 14px; vertical-align: -2px; margin: 0 4px; }
+  .killfeed-entry .obit-weapon { padding: 0 5px; border: 1px solid #ffffff55; border-radius: 3px; font-size: .78em; letter-spacing: .12em; text-transform: uppercase; }
   .scoreboard-team { padding: 8px 10px 4px; color: rgba(220, 235, 245, .8); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; border-top: 1px solid rgba(160, 200, 220, .3); }
   .scoreboard-team.allies { color: #7fd0ff; } .scoreboard-team.axis { color: #ff8b7a; }
   /* Kept as the automation-visible text snapshot (getState().hud) but hidden;
@@ -724,6 +725,7 @@
   <button type="button" class="touch-button touch-jump" data-touch="jump" aria-label="Jump"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6-6 6 6M12 4v14M4 21h16"/></svg><span>JUMP</span></button>
   <button type="button" class="touch-button touch-crouch" data-touch="crouch" aria-label="Toggle crouch" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="14" cy="4" r="2"/><path d="m12 8-3 5 7 2-2 6m-3-11 5 2h4M9 13l-5 5h6"/></svg><span>CROUCH</span></button>
   <button type="button" class="touch-button touch-reload" data-touch="reload" aria-label="Reload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2 8M20 4v6h-6"/></svg><span>RELOAD</span></button>
+  <button type="button" class="touch-button touch-melee" data-touch="melee" aria-label="Knife"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4c-6 .6-11 4.6-13 10.5l2.5 2.5C15.400 15 19.400 10 20 4zM7 15l-3.500 5.500M5.500 13.500l5 5"/></svg><span>KNIFE</span></button>
   <button type="button" class="touch-button touch-scores" id="touch-scores" aria-label="Show scoreboard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h4v10m2 0V4h4v16m2 0V7h4v13"/></svg></button>
   <button type="button" class="touch-button touch-swap" data-touch="swap" aria-label="Swap weapon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3m3 13H7l3 3"/></svg></button>
   <button type="button" class="touch-button touch-streak" data-touch="streak" aria-label="Use killstreak" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg></button>
@@ -770,7 +772,8 @@ import { loadCollisionWorld } from './collision-world.js';
 import { optimizeStaticScene } from './scene-optimizer.js';
 import { applyEnvironmentLighting, loadGradeLut, POST_SHADER, HAZE, applyMaterialClasses } from './lighting.js';
 import { loadProbeVolume, attachObjectProbe } from './light-probes.js';
-import { WEAPONS, getWeapon, damageFor } from './weapons.js';
+import { WEAPONS, getWeapon, lookupWeapon, damageFor } from './weapons.js';
+import { createMelee } from './melee.js';
 import { loadMap, listMaps, synthesiseHints } from './maps.js';
 import { MODES, PLAYER_RULES, getMode } from './modes.js';
 import { readGameConfig, saveSetup, setupUrl } from './game-config.js';
@@ -1262,6 +1265,7 @@ const touchControls = new TouchControls({
   onAction: (action) => {
     if (!canControlPlayer()) return;
     if (action === 'reload') reloadWeapon();
+    else if (action === 'melee') melee.start();
     else if (action === 'swap') swapWeapon();
     else for (const system of systems) if (system.onTouchAction(action)) break;
   },
@@ -1390,13 +1394,13 @@ function updateControlHints() {
   const secondaryName = loadout.secondary ? getWeapon(loadout.secondary)?.name : null;
   frontend.controls = touchControls.mode ? [
     'Left thumb move · Right thumb swipe to look',
-    'Hold FIRE and drag to aim · JUMP · RELOAD',
+    'Hold FIRE and drag to aim · JUMP · RELOAD · KNIFE',
     'Pause for classes and sensitivity · Scores at top right',
   ] : [
     'WASD move · Shift sprint · Space jump · C/Ctrl crouch',
-    'Left mouse fire · Right mouse aim · R reload · B respawn',
+    'Left mouse fire · Right mouse aim · R reload · V knife · B respawn',
     `1 ${primaryName}${secondaryName ? ` · 2 ${secondaryName}` : ''} · Create a class from the menu`,
-    'K cycle camo · N navmesh · V collision · P path · Esc pause',
+    'K cycle camo · N navmesh · Shift+V collision · P path · Esc pause',
   ];
   frontend.render();
   const prompt = document.querySelector('.fe-prompt');
@@ -1465,6 +1469,7 @@ function selectWeapon(id) {
   const next = weaponSlots.get(getWeapon(requested)?.id);
   if (!next?.controller || !next.viewmodel.ready) return false;
   if (next === activeWeaponSlot) return activeWeaponId;
+  if (melee.active) return false;
 
   weapon.setTrigger(false);
   weapon.cancelReload();
@@ -1689,7 +1694,12 @@ function renderMatchUi() {
     killer.className = 'killer';
     killer.textContent = event.killer;
     const icon = OBIT_ICONS[event.cause];
-    if (icon) {
+    if (event.cause === 'melee') {
+      const weaponName = document.createElement('span');
+      weaponName.className = 'obit-weapon';
+      weaponName.textContent = lookupWeapon(event.weaponId)?.name ?? 'Knife';
+      row.append(killer, document.createTextNode('  '), weaponName, document.createTextNode(`  ${event.victim}`));
+    } else if (icon) {
       const image = document.createElement('img');
       image.src = `ui/hud/${icon}.png`;
       image.alt = event.cause;
@@ -1852,6 +1862,8 @@ function clearKeys() {
   touchControls.reset();
   weapon?.setTrigger(false);
   viewmodel.setAiming(false);
+  melee.cancel();
+  viewmodel.cancelMelee();
 }
 
 // A kill marker outlives a body marker so the confirmation still reads when
@@ -1921,7 +1933,46 @@ function fireShot({ triggerShotCount = 0 } = {}) {
   camera.quaternion.setFromEuler(yawPitch);
 }
 
+// Knife (V / touch button). Target choice, lunge and timing live in melee.js;
+// this wires them to the camera, collision world, HUD and sound.
+const meleeRay = new THREE.Raycaster();
+meleeRay.firstHitOnly = true;
+const meleeVector = new THREE.Vector3();
+const meleeTo = new THREE.Vector3();
+const melee = createMelee({
+  combatants,
+  getPose: () => {
+    camera.getWorldDirection(meleeVector);
+    return { eye: [camera.position.x, camera.position.y, camera.position.z], forward: [meleeVector.x, 0, meleeVector.z] };
+  },
+  // A wall between the eye and the chest stops the blade.
+  blocked: (from, to) => {
+    if (!collisionRoot) return false;
+    meleeVector.fromArray(from);
+    meleeTo.fromArray(to).sub(meleeVector);
+    const length = meleeTo.length();
+    meleeRay.set(meleeVector, meleeTo.normalize());
+    meleeRay.near = 0;
+    meleeRay.far = Math.max(0, length - 4);
+    return meleeRay.intersectObject(collisionRoot, true).length > 0;
+  },
+  canSwing: () => canControlPlayer() && viewmodel.ready,
+  onSwing: () => {
+    if (playerHealth?.protectionTimer > 0) playerHealth.protectionTimer = 0;
+    weapon.cancelReload(); // the knife interrupts a reload and the sight picture
+    viewmodel.melee();
+    weaponEffects.playFoley('fly_reload_cloth_med');
+  },
+  onHit: ({ targetId, applied, killed }) => {
+    if (!targetId || applied <= 0) return;
+    showHitmarker(killed ? 'kill' : 'torso');
+    weaponEffects.playHitmarker({ region: 'torso', killed });
+    weaponEffects.playFoley('fly_scar_tap');
+  },
+});
+
 function reloadWeapon() {
+  if (melee.active) return false;
   const empty = weapon.magazine === 0;
   if (!weapon.startReload()) return false;
   if (!viewmodel.reload(empty)) {
@@ -2014,6 +2065,7 @@ function getDebugState() {
       magazineSize: weapon.magazineSize,
       reserveAmmo: weapon.reserveAmmo,
       reloading: weapon.reloading,
+      melee: melee.getState(),
       triggerHeld: weapon.triggerHeld,
       fireCount: weapon.fireCount,
       aiming: viewmodel.aimBlend > 0.5,
@@ -2159,6 +2211,8 @@ function createDebugApi() {
       return { killed, event: killed && lastKill !== before ? lastKill : null };
     },
     setLoadout: (value) => setLoadout(value),
+    // Start a knife swing as the V key would. Returns false while recovering or when controls are locked out.
+    melee: () => melee.start(),
     recentEvents: () => bus.history(),
     setWeaponAmmo(magazine, reserveAmmo) {
       weapon.magazine = THREE.MathUtils.clamp(Math.trunc(Number(magazine) || 0), 0, weapon.magazineSize);
@@ -2290,8 +2344,13 @@ document.addEventListener('keydown', (event) => {
     setDebugVisibility();
   }
   if (event.code === 'KeyV') {
-    collisionVisible = !collisionVisible;
-    setDebugVisibility();
+    // V is the knife. Shift+V is the collision debug view, except while sprinting
+    // (Shift held with a move key), when it is still a knife.
+    const sprintKeys = (keys.ShiftLeft || keys.ShiftRight) && (keys.KeyW || keys.KeyA || keys.KeyS || keys.KeyD);
+    if (event.shiftKey && !(locked && sprintKeys)) {
+      collisionVisible = !collisionVisible;
+      setDebugVisibility();
+    } else if (locked) melee.start();
   }
   if (event.code === 'KeyP') showPathToCrosshair();
   if (event.code === 'KeyK' && locked) { viewmodel.cycleCamo(); refreshTextureFiltering(); }
@@ -2551,7 +2610,7 @@ async function start() {
       captureInput,
       weapons: {
         activeId: () => activeWeaponId,
-        definition: (id) => getWeapon(id),
+        definition: (id) => lookupWeapon(id),
         applyDefinition: applyWeaponDefinition,
         load: loadWeapons,
         setLoadout,
@@ -2590,9 +2649,9 @@ async function start() {
     ready = true;
     frontend.setReady([
       'WASD move · Shift sprint · Space jump · C/Ctrl crouch',
-      'Left mouse fire · Right mouse aim · R reload · B respawn',
+      'Left mouse fire · Right mouse aim · R reload · V knife · B respawn',
       `1 ${getWeapon(loadout.primary)?.name ?? ''}${loadout.secondary ? ` · 2 ${getWeapon(loadout.secondary)?.name}` : ''} · Create a class from the menu`,
-      'K cycle camo · N navmesh · V collision · P path · Esc pause',
+      'K cycle camo · N navmesh · Shift+V collision · P path · Esc pause',
       navigation ? '' : 'Navigation failed to load; collision and walking are still available.',
     ]);
     updateControlHints();
@@ -2635,7 +2694,10 @@ function tick() {
   };
   weapon.setTrigger(controlsActive && (mouseFire || touch.fire));
   viewmodel.setAiming(controlsActive && (mouseAim || touch.aim));
+  if (simulate) melee.update(dt);
   if (player && simulate) {
+    const lunge = melee.lunge;
+    if (lunge) { player.velocity.x = lunge.x; player.velocity.z = lunge.z; }
     player.update(dt, controlsActive ? movement : {});
   }
   if (simulate) navigation?.update(1 / 60, dt, 5);
@@ -2675,7 +2737,7 @@ function tick() {
       moving,
     });
     if (weapon.reloading && !viewmodel.reloading) weapon.finishReload();
-    weapon.update(dt, { canFire: simulationActive && (!sprinting || player.sliding) && !playerHealth?.dead });
+    weapon.update(dt, { canFire: simulationActive && (!sprinting || player.sliding) && !playerHealth?.dead && !melee.active });
 
     if (playerHealth?.dead) {
       const sourcePosition = Number.isInteger(deathSource?.index) && !deathSource.dead

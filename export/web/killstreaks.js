@@ -233,7 +233,7 @@ export const system = (() => {
       if (event.cause === 'crate') state.crateKills += 1;
       return;
     }
-    if (event.cause !== 'bullet' || !isHostile(event.victimId)) return;
+    if ((event.cause !== 'bullet' && event.cause !== 'melee') || !isHostile(event.victimId)) return;
     const id = tracker.onKill();
     if (id) earned(id);
   }

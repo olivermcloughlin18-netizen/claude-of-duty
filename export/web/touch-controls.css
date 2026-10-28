@@ -49,6 +49,7 @@ body.touch-mode canvas { touch-action: none; }
 .touch-jump { right: var(--touch-right); bottom: calc(var(--touch-bottom) + 92px); }
 .touch-crouch { right: calc(var(--touch-right) + 14px); bottom: calc(var(--touch-bottom) + 20px); }
 .touch-reload { right: calc(var(--touch-right) + 94px); bottom: var(--touch-bottom); }
+.touch-melee { right: calc(var(--touch-right) + 178px); bottom: var(--touch-bottom); }
 .touch-pause, .touch-scores, .touch-swap, .touch-streak { top: max(12px, env(safe-area-inset-top)); width: 46px; height: 46px; border-radius: 12px; }
 .touch-pause { right: var(--touch-right); }
 .touch-scores { right: calc(var(--touch-right) + 56px); }
@@ -116,6 +117,7 @@ body.touch-mode #scoreboard .touch-only[hidden] { display: none; }
   .touch-jump { bottom: calc(var(--touch-bottom) + 185px); }
   .touch-crouch { right: var(--touch-right); bottom: calc(var(--touch-bottom) + 18px); }
   .touch-reload { right: calc(var(--touch-right) + 74px); }
+  .touch-melee { right: calc(var(--touch-right) + 130px); bottom: var(--touch-bottom); }
   .touch-hint { right: 14px; bottom: calc(var(--touch-bottom) + 253px); }
   body.touch-mode #match-status { top: max(128px, calc(env(safe-area-inset-top) + 118px)); max-width: 90%; }
   body.touch-mode #killfeed { top: 165px; }

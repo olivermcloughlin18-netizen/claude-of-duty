@@ -366,6 +366,20 @@ export const ATTACHMENTS = {
 
 const ALIASES = Object.freeze({ hk416: 'm27' });
 
+// The knife is a damage source, not a gun: it lives outside WEAPONS so class
+// screens, viewmodel slots and the loadout validator never see it as a primary.
+// Ranges are world units (inches). `roundsPerMinute` is one swing per 0.7 s
+// recovery; the server derives its claim rate limit from it.
+export const KNIFE = deepFreeze({
+  id: 'knife', name: 'Knife', class: 'melee', melee: true, damage: 150, pellets: 1,
+  roundsPerMinute: 60 / 0.7, range: 72, serverRange: 120, recovery: 0.7,
+});
+
+/** Any id a kill or damage event can carry that the registry knows, knife included. */
+export function lookupWeapon(id) {
+  return String(id ?? '').toLowerCase() === KNIFE.id ? KNIFE : getWeapon(id);
+}
+
 export function getWeapon(id) {
   const key = String(id ?? '').toLowerCase();
   return WEAPONS[ALIASES[key] ?? key] ?? null;
