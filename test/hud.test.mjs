@@ -44,3 +44,13 @@ test('minimapCalibration falls back to the bounds when a map has no minimap', ()
   const authored = { centerX: 1, centerZ: 2, size: 3, flipU: 1, flipV: 1, span: 9, image: 'm.png' };
   assert.equal(minimapCalibration({ minimap: authored }).minimapSpan, 9);
 });
+
+test('leaderboard view shows the top five plus the player when lower', async () => {
+  const { leaderboardView } = await import('../export/web/hud.js');
+  const standings = Array.from({ length: 8 }, (_, i) => ({ id: i === 6 ? 'player' : `bot-${i}`, name: `P${i}`, score: 8 - i, place: i + 1 }));
+  const view = leaderboardView({ modeName: 'Free for all', standings, teams: null });
+  assert.deepEqual(view.rows.map((row) => row.id), ['bot-0', 'bot-1', 'bot-2', 'bot-3', 'bot-4', 'player']);
+  assert.equal(view.place, 7);
+  assert.equal(view.rows.at(-1).me, true);
+  assert.equal(leaderboardView({ standings: standings.slice(0, 3).map((e) => ({ ...e, id: e.id })) }).rows.length, 3);
+});

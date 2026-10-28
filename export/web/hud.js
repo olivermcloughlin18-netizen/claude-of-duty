@@ -250,3 +250,96 @@ export class Hud {
     }
   }
 }
+
+// ---- Live leaderboard (top-left, under the compass) ----------------------
+const ROW_H = 24;
+const ORDINAL = (n) => `${n}${['TH', 'ST', 'ND', 'RD'][(n % 100 >> 3) ^ 1 && n % 10 < 4 ? n % 10 : 0]}`;
+
+// Pure view of match.getState(): top `max` by score plus the player's own row.
+export function leaderboardView(state, selfId = 'player', max = globalThis.matchMedia?.('(max-height: 520px)').matches ? 3 : 5) {
+  const all = state.standings ?? [];
+  const me = all.find((entry) => entry.id === selfId);
+  const rows = all.slice(0, max);
+  if (me && !rows.includes(me)) rows.push(me);
+  return {
+    mode: state.modeName ?? '',
+    place: me?.place ?? 0,
+    total: all.length,
+    teams: state.teams ? state.teams.map((team) => ({ id: team.id, score: team.score })) : null,
+    rows: rows.map((entry) => ({
+      id: entry.id, name: entry.name, score: entry.score, place: entry.place, me: entry.id === selfId, team: entry.team,
+    })),
+  };
+}
+
+export class Leaderboard {
+  constructor(root) {
+    this.root = root;
+    this.root.innerHTML = '<div class="lb-head"><b class="lb-place"></b><span class="lb-total"></span>' +
+      '<i class="lb-plus"></i><span class="lb-mode"></span></div><div class="lb-teams"></div><div class="lb-rows"></div>';
+    [this.place, this.total, this.plus, this.mode, this.teams, this.list] = ['.lb-place', '.lb-total', '.lb-plus', '.lb-mode', '.lb-teams', '.lb-rows']
+      .map((selector) => root.querySelector(selector));
+    this.els = new Map();
+    this.signature = '';
+    this.myScore = null;
+    this.view = null;
+  }
+
+  getState() { return this.view; }
+
+  // Cheap to call every frame: the DOM is only touched when the standings change.
+  render(state) {
+    const view = leaderboardView(state);
+    const signature = JSON.stringify(view);
+    if (signature === this.signature) return;
+    const prev = this.view;
+    this.signature = signature;
+    this.view = view;
+
+    const myNow = view.rows.find((row) => row.me);
+    const myPrev = prev?.rows.find((row) => row.me);
+    this.place.textContent = view.place ? ORDINAL(view.place) : '';
+    this.total.textContent = view.total ? `/ ${view.total}` : '';
+    this.mode.textContent = view.mode;
+    if (myNow && myPrev && view.place < prev.place) this.pulse(this.place, 'up');
+    if (myNow && myPrev && myNow.score > myPrev.score) {
+      this.plus.textContent = `+${myNow.score - myPrev.score}`;
+      this.pulse(this.plus, 'show');
+    }
+    this.teams.hidden = !view.teams;
+    this.teams.innerHTML = view.teams
+      ? `<span class="${view.teams[0].id}">${view.teams[0].id} ${view.teams[0].score}</span><span class="${view.teams[1].id}">${view.teams[1].score} ${view.teams[1].id}</span>`
+      : '';
+
+    const seen = new Set();
+    view.rows.forEach((row, index) => {
+      seen.add(row.id);
+      let el = this.els.get(row.id);
+      if (!el) {
+        el = document.createElement('div');
+        el.innerHTML = '<em></em><span></span><b></b>';
+        el.style.transform = `translateY(${index * ROW_H}px)`;
+        this.els.set(row.id, el);
+        this.list.appendChild(el);
+      }
+      const old = Number(el.dataset.rank);
+      el.className = `lb-row${row.me ? ' me' : ''}${row.team ? ` ${row.team}` : ''}`;
+      el.dataset.rank = index + 1;
+      el.children[0].textContent = row.place;
+      el.children[1].textContent = row.name;
+      el.children[2].textContent = row.score;
+      el.style.transform = `translateY(${index * ROW_H}px)`;
+      if (old && index + 1 < old) this.pulse(el, 'rise');
+    });
+    for (const [id, el] of this.els) {
+      if (!seen.has(id)) { el.remove(); this.els.delete(id); }
+    }
+    this.list.style.height = `${view.rows.length * ROW_H}px`;
+  }
+
+  pulse(el, cls) {
+    el.classList.remove(cls);
+    void el.offsetWidth; // restart the CSS animation
+    el.classList.add(cls);
+  }
+}
