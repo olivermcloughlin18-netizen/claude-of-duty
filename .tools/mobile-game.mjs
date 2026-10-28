@@ -133,6 +133,9 @@ export async function runMobileTest(page, artifactRoot) {
   await contact('touchStart', 1, origin);
   await contact('touchMove', 1, { x: origin.x, y: origin.y - 28 });
   await wait(() => globalThis.hijacked.debug.getState().input.touch.forward > 0.3);
+  // Input lands before the next simulated frame; at headless frame rates wait for the feet to move too.
+  await page.waitForFunction((f) => Math.hypot(...globalThis.hijacked.debug.getState().player.feet.map((v, i) => v - f[i])) > 1,
+    beforeMove.player.feet, { timeout: 45000 }).catch(() => {});
   const walking = await shot('walk');
   check('analogWalk', walking.input.touch.forward > 0.3 && walking.input.touch.forward < 0.8 && !walking.input.touch.sprint);
   check('touchMovesPlayer', Math.hypot(...walking.player.feet.map((v, i) => v - beforeMove.player.feet[i])) > 1);
@@ -226,7 +229,8 @@ export async function runMobileTest(page, artifactRoot) {
   await tap('[data-action="class"]:visible', 'classes-landscape');
   await tap('[data-weapon-id="an94"]', 'class-selected');
   await tap('[data-action="class-confirm"]', 'class-confirmed');
-  check('touchClassSelection', (await state()).weapon.id === 'an94');
+  // A class edited from the pause menu is queued and equips on the next respawn (BO2).
+  check('touchClassSelection', await (async () => { const l = (await state()).systems.loadout; return l.classes[l.pending ?? l.classIndex]?.primary === 'an94'; })());
   await tap('[data-action="resume"]', 'resumed');
   await contact('touchStart', 1, await center('[data-touch="fire"]'));
   await shot('rotation-setup');
@@ -260,7 +264,9 @@ export async function runMobileTest(page, artifactRoot) {
   await page.evaluate(() => globalThis.hijacked.debug.finishMatch());
   await shot('match-ended');
   check('matchRestartReachable', await page.locator('#touch-restart').isVisible());
-  const restarted = await tap('#touch-restart', 'match-restarted');
+  await tap('#touch-restart', 'match-restart-class');
+  // A new match opens the class pick before spawning; Spawn starts play.
+  const restarted = await tap('[data-action="class-confirm"]', 'match-restarted');
   check('touchRestartsMatch', restarted.match.phase === 'playing' && restarted.active && restarted.player.enabled);
   for (const [name, size] of [
     ['small-phone', { width: 320, height: 568 }],
